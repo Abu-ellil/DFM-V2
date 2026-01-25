@@ -28,23 +28,26 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Build project
+        run: npm run build
+
       - name: Build and release (Windows)
         if: matrix.os == 'windows-latest'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run build:win -- --publish always
+        run: npx electron-builder --win --publish always
 
       - name: Build and release (macOS)
         if: matrix.os == 'macos-latest'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run build:mac -- --publish always
+        run: npx electron-builder --mac --publish always
 
       - name: Build and release (Linux)
         if: matrix.os == 'ubuntu-latest'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run build:linux -- --publish always
+        run: npx electron-builder --linux --publish always
 
       - name: Upload artifacts (Windows)
         if: matrix.os == 'windows-latest'
