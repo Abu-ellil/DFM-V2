@@ -46,6 +46,7 @@ export default function Settings() {
   useEffect(() => {
     setFormData(settings)
     if (settings.company_name) setFactoryName(settings.company_name)
+    if (settings.telegram_token) setBotToken(settings.telegram_token)
   }, [settings])
 
   const fetchDataManagement = async () => {
@@ -272,7 +273,7 @@ export default function Settings() {
     try {
       setIsProcessing(true)
       const result = await (window as any).api.telegram.sendReport()
-      
+
       if (result.success) {
         toast.success(result.message || 'تم إرسال التقرير بنجاح')
       } else {
@@ -285,6 +286,71 @@ export default function Settings() {
       setIsProcessing(false)
     }
   }
+
+  // Telegram Bot Management States
+  const [botStatus, setBotStatus] = useState<any>(null)
+  const [botToken, setBotToken] = useState(formData.telegram_token || '')
+
+  const fetchBotStatus = async () => {
+    const stats = await window.api.telegram.getStats()
+    setBotStatus(stats)
+  }
+
+  const handleStartBot = async () => {
+    const result = await window.api.telegram.startBot()
+    if (result.success) {
+      toast.success(result.message || 'تم تشغيل البوت')
+      fetchBotStatus()
+    } else {
+      toast.error(result.message || 'فشل تشغيل البوت')
+    }
+  }
+
+  const handleStopBot = async () => {
+    const result = await window.api.telegram.stopBot()
+    if (result.success) {
+      toast.success(result.message || 'تم إيقاف البوت')
+      fetchBotStatus()
+    } else {
+      toast.error(result.message || 'فشل إيقاف البوت')
+    }
+  }
+
+  const handleRestartBot = async () => {
+    const result = await window.api.telegram.restartBot()
+    if (result.success) {
+      toast.success(result.message || 'تم إعادة تشغيل البوت')
+      fetchBotStatus()
+    } else {
+      toast.error(result.message || 'فشل إعادة تشغيل البوت')
+    }
+  }
+
+  const handleTestBotConnection = async () => {
+    if (!botToken) {
+      toast.error('يرجى إدخال توكن البوت أولاً')
+      return
+    }
+    const result = await window.api.telegram.testConnection(botToken)
+    if (result.success) {
+      toast.success(`تم الاتصال بالبوت: @${result.botInfo?.username}`)
+    } else {
+      toast.error(result.message || 'فشل الاتصال بالبوت')
+    }
+  }
+
+  const handleEnableBot = async (enabled: boolean) => {
+    await handleSave('telegram_bot_enabled', enabled ? '1' : '0')
+    if (enabled) {
+      handleStartBot()
+    } else {
+      handleStopBot()
+    }
+  }
+
+  useEffect(() => {
+    fetchBotStatus()
+  }, [])
 
   return (
     <div className="space-y-6 pb-20">
@@ -606,6 +672,130 @@ export default function Settings() {
                 </button>
               </div>
             </div>
+          </div>
+        </Card>
+
+        {/* Telegram Bot Management */}
+        <Card className="space-y-4">
+          <div className="flex items-center gap-2 mb-4 text-blue-600">
+            <Bell size={20} />
+            <h3 className="font-bold">إدارة بوت تيليجرام</h3>
+          </div>
+
+          <div className="space-y-4">
+            {/* Bot Status */}
+            <div className={`p-4 rounded-lg border-2 ${
+              botStatus?.isRunning
+                ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800'
+                : 'bg-slate-50 border-slate-200 dark:bg-slate-800 dark:border-slate-700'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className={`w-3 h-3 rounded-full ${
+                    botStatus?.isRunning ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
+                  }`} />
+                  <span className="font-bold text-sm">
+                    {botStatus?.isRunning ? 'البوت يعمل' : 'البوت متوقف'}
+                  </span>
+                </div>
+                <button
+                  onClick={() => handleEnableBot(!botStatus?.isRunning)}
+                  className={`text-xs px-4 py-2 rounded-full font-bold transition-colors ${
+                    botStatus?.isRunning
+                      ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                      : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                  }`}
+                >
+                  {botStatus?.isRunning ? 'إيقاف البوت' : 'تشغيل البوت'}
+                </button>
+              </div>
+            </div>
+
+            {/* Bot Token Test */}
+            <div>
+              <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">اختبار التوكن</label>
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  placeholder="Telegram Bot Token"
+                  className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                  value={botToken}
+                  onChange={(e) => setBotToken(e.target.value)}
+                />
+                <button
+                  onClick={handleTestBotConnection}
+                  className="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700 transition-colors text-sm font-bold"
+                >
+                  اختبار
+                </button>
+              </div>
+            </div>
+
+            {/* Bot Controls */}
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                onClick={handleStartBot}
+                disabled={!formData.telegram_token}
+                className="bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-700 transition-colors text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                تشغيل
+              </button>
+              <button
+                onClick={handleStopBot}
+                disabled={!botStatus?.isRunning}
+                className="bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                إيقاف
+              </button>
+              <button
+                onClick={handleRestartBot}
+                disabled={!formData.telegram_token}
+                className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                إعادة تشغيل
+              </button>
+            </div>
+
+            {/* Bot Stats */}
+            {botStatus?.notificationStats && (
+              <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg space-y-2 text-xs">
+                <div className="font-bold text-slate-600 dark:text-slate-400 mb-2">إحصائيات الإشعارات</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">في الانتظار:</span>
+                    <span className="font-bold">{botStatus.notificationStats.pending}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">تم الإرسال:</span>
+                    <span className="font-bold text-emerald-600">{botStatus.notificationStats.sent}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">فاشلة:</span>
+                    <span className="font-bold text-red-500">{botStatus.notificationStats.failed}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {botStatus?.registrationStats && (
+              <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg space-y-2 text-xs">
+                <div className="font-bold text-slate-600 dark:text-slate-400 mb-2">إحصائيات التسجيل</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">قيد المراجعة:</span>
+                    <span className="font-bold">{botStatus.registrationStats.pending}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">مقبولة:</span>
+                    <span className="font-bold text-emerald-600">{botStatus.registrationStats.approved}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">مرفوضة:</span>
+                    <span className="font-bold text-red-500">{botStatus.registrationStats.rejected}</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </Card>
 

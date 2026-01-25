@@ -7,6 +7,14 @@ import icon from '../../resources/icon.png?asset'
 import { initializeDatabase, getDb, saveDatabase, getDbPath } from './db'
 import bcrypt from 'bcryptjs'
 import { generateReportData, generateReportSummary, generateExcelReport, generateJsonReport, sendReportToTelegram } from './reports'
+import {
+  startTelegramBot,
+  stopTelegramBot,
+  restartTelegramBot,
+  updateBotToken,
+  testBotConnection,
+  getBotStats
+} from './telegram'
 
 // Import license manager from root
 // @ts-ignore (license.js is in root)
@@ -21,6 +29,18 @@ async function createWindow(): Promise<void> {
     console.log('Database initialized successfully')
   } catch (error) {
     console.error('Failed to initialize database:', error)
+  }
+
+  // Start Telegram bot if configured
+  try {
+    const botResult = await startTelegramBot()
+    if (botResult.success) {
+      console.log('Telegram bot started:', botResult.message)
+    } else {
+      console.log('Telegram bot not started:', botResult.message)
+    }
+  } catch (error) {
+    console.error('Failed to start Telegram bot:', error)
   }
 
   // Create the browser window.
@@ -861,7 +881,7 @@ ipcMain.handle('license:activate', async (_event, { licenseKey, factoryName }) =
 })
 
 ipcMain.handle('license:check', async () => {
-  return licenseManager.isLicensed()
+  return await licenseManager.isLicensed()
 })
 
 ipcMain.handle('license:openTrialRequest', async () => {
@@ -1029,6 +1049,210 @@ ipcMain.handle('duplicates:autoClean', async () => {
   } catch (error: any) {
     console.error('Auto clean duplicates error:', error)
     return { success: false, message: error.message }
+  }
+})
+
+// Telegram Bot IPC Handlers
+ipcMain.handle('telegram:startBot', async () => {
+  return startTelegramBot()
+})
+
+ipcMain.handle('telegram:stopBot', async () => {
+  return stopTelegramBot()
+})
+
+ipcMain.handle('telegram:restartBot', async () => {
+  return restartTelegramBot()
+})
+
+ipcMain.handle('telegram:testConnection', async (_event, token?) => {
+  return testBotConnection(token)
+})
+
+ipcMain.handle('telegram:getStats', async () => {
+  return getBotStats()
+})
+
+// Telegram Users IPC
+ipcMain.handle('telegram:getUsers', async (_event, filters) => {
+  try {
+    const db = getDb()
+    let query = `
+      SELECT tu.*, ur.role
+      FROM telegram_users tu
+      LEFT JOIN user_roles ur ON tu.user_id = ur.user_id
+    `
+    const params: any[] = []
+    const conditions: string[] = []
+
+    if (filters?.status) {
+      conditions.push('tu.status = ?')
+      params.push(filters.status)
+    }
+
+    if (filters?.role) {
+      conditions.push('ur.role = ?')
+      params.push(filters.role)
+    }
+
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND ')
+    }
+
+    query += ' ORDER BY tu.registration_date DESC'
+
+    if (filters?.limit) {
+      query += ' LIMIT ?'
+      params.push(filters.limit)
+      if (filters?.offset) {
+        query += ' OFFSET ?'
+        params.push(filters.offset)
+      }
+    }
+
+    const stmt = db.prepare(query)
+    params.forEach((param) => stmt.bind([param]))
+
+    const users: any[] = []
+    while (stmt.step()) {
+      users.push(stmt.getAsObject())
+    }
+    stmt.free()
+
+    return { success: true, data: users }
+  } catch (error: any) {
+    console.error('Get telegram users error:', error)
+    return { success: false, message: error.message || 'Failed to get users' }
+  }
+})
+
+ipcMain.handle('telegram:updateUser', async (_event, telegramId, data) => {
+  try {
+    const db = getDb()
+    const updates: string[] = []
+    const params: any[] = []
+
+    if (data.status !== undefined) {
+      updates.push('status = ?')
+      params.push(data.status)
+    }
+
+    if (data.role !== undefined) {
+      // Update role in user_roles table
+      const getUserIdStmt = db.prepare('SELECT user_id FROM telegram_users WHERE telegram_id = ?')
+      getUserIdStmt.bind([telegramId])
+      getUserIdStmt.step()
+      const userIdResult = getUserIdStmt.getAsObject() as any
+      getUserIdStmt.free()
+
+      if (userIdResult?.user_id) {
+        // Check if role exists
+        const checkRoleStmt = db.prepare('SELECT * FROM user_roles WHERE user_id = ?')
+        checkRoleStmt.bind([userIdResult.user_id])
+        if (checkRoleStmt.step()) {
+          const updateRoleStmt = db.prepare('UPDATE user_roles SET role = ? WHERE user_id = ?')
+          updateRoleStmt.bind([data.role, userIdResult.user_id])
+          updateRoleStmt.run()
+          updateRoleStmt.free()
+        } else {
+          const insertRoleStmt = db.prepare('INSERT INTO user_roles (user_id, role) VALUES (?, ?)')
+          insertRoleStmt.bind([userIdResult.user_id, data.role])
+          insertRoleStmt.run()
+          insertRoleStmt.free()
+        }
+        checkRoleStmt.free()
+      }
+    }
+
+    if (updates.length > 0) {
+      params.push(telegramId)
+      const stmt = db.prepare(`UPDATE telegram_users SET ${updates.join(', ')} WHERE telegram_id = ?`)
+      stmt.bind(params)
+      stmt.run()
+      stmt.free()
+    }
+
+    await saveDatabase()
+    return { success: true }
+  } catch (error: any) {
+    console.error('Update telegram user error:', error)
+    return { success: false, message: error.message || 'Failed to update user' }
+  }
+})
+
+ipcMain.handle('telegram:deleteUser', async (_event, telegramId) => {
+  try {
+    const db = getDb()
+
+    // Delete user roles
+    const deleteRoleStmt = db.prepare(`
+      DELETE FROM user_roles
+      WHERE user_id IN (SELECT user_id FROM telegram_users WHERE telegram_id = ?)
+    `)
+    deleteRoleStmt.bind([telegramId])
+    deleteRoleStmt.run()
+    deleteRoleStmt.free()
+
+    // Delete notifications
+    const deleteNotifStmt = db.prepare('DELETE FROM notification_queue WHERE telegram_id = ?')
+    deleteNotifStmt.bind([telegramId])
+    deleteNotifStmt.run()
+    deleteNotifStmt.free()
+
+    // Delete preferences
+    const deletePrefStmt = db.prepare('DELETE FROM notification_preferences WHERE telegram_id = ?')
+    deletePrefStmt.bind([telegramId])
+    deletePrefStmt.run()
+    deletePrefStmt.free()
+
+    // Delete user
+    const deleteStmt = db.prepare('DELETE FROM telegram_users WHERE telegram_id = ?')
+    deleteStmt.bind([telegramId])
+    deleteStmt.run()
+    deleteStmt.free()
+
+    await saveDatabase()
+    return { success: true }
+  } catch (error: any) {
+    console.error('Delete telegram user error:', error)
+    return { success: false, message: error.message || 'Failed to delete user' }
+  }
+})
+
+// Telegram Registrations IPC
+ipcMain.handle('telegram:getRegistrations', async (_event, filters) => {
+  try {
+    const { getRegistrationHandler } = require('./telegram/handlers/registration')
+    const handler = getRegistrationHandler()
+    const registrations = await handler.getRegistrations(filters)
+    return { success: true, data: registrations }
+  } catch (error: any) {
+    console.error('Get registrations error:', error)
+    return { success: false, message: error.message || 'Failed to get registrations' }
+  }
+})
+
+ipcMain.handle('telegram:approveRegistration', async (_event, registrationId, role, reviewerUserId) => {
+  try {
+    const { getRegistrationHandler } = require('./telegram/handlers/registration')
+    const handler = getRegistrationHandler()
+    const result = await handler.approveRegistration(registrationId, role, reviewerUserId)
+    return result
+  } catch (error: any) {
+    console.error('Approve registration error:', error)
+    return { success: false, message: error.message || 'Failed to approve registration' }
+  }
+})
+
+ipcMain.handle('telegram:rejectRegistration', async (_event, registrationId, reason, reviewerUserId) => {
+  try {
+    const { getRegistrationHandler } = require('./telegram/handlers/registration')
+    const handler = getRegistrationHandler()
+    const result = await handler.rejectRegistration(registrationId, reason, reviewerUserId)
+    return result
+  } catch (error: any) {
+    console.error('Reject registration error:', error)
+    return { success: false, message: error.message || 'Failed to reject registration' }
   }
 })
 

@@ -60,6 +60,22 @@ const api = {
   telegram: {
     send: (data) => ipcRenderer.invoke('telegram:send', data),
     sendReport: () => ipcRenderer.invoke('telegram:sendReport'),
+    // Bot management
+    startBot: () => ipcRenderer.invoke('telegram:startBot'),
+    stopBot: () => ipcRenderer.invoke('telegram:stopBot'),
+    restartBot: () => ipcRenderer.invoke('telegram:restartBot'),
+    testConnection: (token?: string) => ipcRenderer.invoke('telegram:testConnection', token),
+    getStats: () => ipcRenderer.invoke('telegram:getStats'),
+    // User management
+    getUsers: (filters?: any) => ipcRenderer.invoke('telegram:getUsers', filters),
+    updateUser: (telegramId: number, data: any) => ipcRenderer.invoke('telegram:updateUser', telegramId, data),
+    deleteUser: (telegramId: number) => ipcRenderer.invoke('telegram:deleteUser', telegramId),
+    // Registration management
+    getRegistrations: (filters?: any) => ipcRenderer.invoke('telegram:getRegistrations', filters),
+    approveRegistration: (registrationId: number, role: string, reviewerUserId: number) =>
+      ipcRenderer.invoke('telegram:approveRegistration', registrationId, role, reviewerUserId),
+    rejectRegistration: (registrationId: number, reason?: string, reviewerUserId?: number) =>
+      ipcRenderer.invoke('telegram:rejectRegistration', registrationId, reason, reviewerUserId)
   },
   license: {
     getInfo: () => ipcRenderer.invoke('license:getInfo'),
