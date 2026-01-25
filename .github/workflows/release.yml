@@ -70,16 +70,37 @@ jobs:
           name: windows-build
           path: dist/*
 
+      - name: Upload Windows to release
+        if: matrix.os == 'windows-latest'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ github.ref_name }} dist/*.exe dist/*.zip --clobber
+
       - name: Upload artifacts (macOS)
         if: matrix.os == 'macos-latest'
         uses: actions/upload-artifact@v4
         with:
           name: mac-build
-          path: dist/*.{dmg,zip}
+          path: dist/*
+
+      - name: Upload macOS to release
+        if: matrix.os == 'macos-latest'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ github.ref_name }} dist/*.dmg dist/*.zip --clobber
 
       - name: Upload artifacts (Linux)
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v4
         with:
           name: linux-build
-          path: dist/*.{AppImage,deb,snap}
+          path: dist/*
+
+      - name: Upload Linux to release
+        if: matrix.os == 'ubuntu-latest'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ github.ref_name }} dist/*.AppImage dist/*.deb dist/*.snap --clobber || true
