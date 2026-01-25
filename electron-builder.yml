@@ -2,6 +2,7 @@ appId: com.dfm.app
 productName: DFM-V2
 directories:
   buildResources: build
+  output: dist
 files:
   - '!**/.vscode/*'
   - '!src/*'
@@ -9,14 +10,14 @@ files:
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+asar: true
 asarUnpack:
   - resources/**
+compression: maximum
 win:
   executableName: DFM-V2
+  icon: build/icon.ico
   target:
-    - target: portable
-      arch:
-        - x64
     - target: nsis
       arch:
         - x64
@@ -27,8 +28,6 @@ nsis:
   createDesktopShortcut: always
   oneClick: false
   allowToChangeInstallationDirectory: true
-portable:
-  artifactName: ${name}-${version}-portable.${ext}
 mac:
   target:
     - target: dmg

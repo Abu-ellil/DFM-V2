@@ -106,8 +106,8 @@ export const ActivationScreen: React.FC<ActivationScreenProps> = ({ onActivation
                 <p className="text-xs text-blue-800 dark:text-blue-200 mb-2">
                   استخدم هذا المعرف لطلب مفتاح التفعيل
                 </p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 text-sm font-mono bg-blue-100 dark:bg-blue-900/40 px-3 py-2 rounded-lg text-blue-900 dark:text-blue-100 select-all">
+                <div className="flex items-center gap-2 min-w-0">
+                  <code className="flex-1 text-sm font-mono bg-blue-100 dark:bg-blue-900/40 px-3 py-2 rounded-lg text-blue-900 dark:text-blue-100 select-all break-all overflow-hidden">
                     {machineId || 'جاري التحميل...'}
                   </code>
                   <button
@@ -130,7 +130,7 @@ export const ActivationScreen: React.FC<ActivationScreenProps> = ({ onActivation
               <input
                 type="text"
                 required
-                placeholder="مثال: ABC1-DEF2-GHI3-JKL4-1M"
+                placeholder="XXXX-XXXX-XXXX-XXXX"
                 value={licenseKey}
                 onChange={(e) => setLicenseKey(e.target.value.toUpperCase())}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white text-center font-mono text-lg tracking-wider"

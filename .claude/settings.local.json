@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build:win:*)",
+      "Bash(npm install:*)",
+      "Bash(npm cache clean:*)",
+      "Bash(if exist node_modules rmdir /s /q node_modules)",
+      "Bash(if exist:*)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(powershell:*)",
+      "Bash(npx electron-builder:*)",
+      "Bash(set CSC_LINK=)",
+      "Bash(set CSC_KEY_PASSWORD=)",
+      "Bash(export:*)",
+      "Bash(ls:*)",
+      "Bash(du:*)",
+      "Bash(npx asar:*)",
+      "Bash(npx depcheck:*)",
+      "Bash(npm uninstall:*)"
+    ]
+  }
+}

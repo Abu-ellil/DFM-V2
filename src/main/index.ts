@@ -10,7 +10,7 @@ import { generateReportData, generateReportSummary, generateExcelReport, generat
 
 // Import license manager from root
 // @ts-ignore (license.js is in root)
-import licenseManager = require('../../../license.js')
+import licenseManager = require('../../license.js')
 
 let mainWindow: BrowserWindow | null = null
 
@@ -865,7 +865,7 @@ ipcMain.handle('license:check', async () => {
 })
 
 ipcMain.handle('license:openTrialRequest', async () => {
-  const TRIAL_REQUEST_URL = process.env.TRIAL_REQUEST_URL || 'https://dates-factory.vercel.app/trial'
+  const TRIAL_REQUEST_URL = process.env.TRIAL_REQUEST_URL || 'https://dates-factory-manager-cloud.vercel.app/trial'
   shell.openExternal(TRIAL_REQUEST_URL)
   return { success: true }
 })
