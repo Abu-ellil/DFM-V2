@@ -1,5 +1,5 @@
 import TelegramBot from 'node-telegram-bot-api'
-import { Messages } from '../../utils/messages'
+import { Messages } from '../utils/messages'
 import { getUserByTelegramId, updateUserLastInteraction } from '../middleware/auth'
 
 export async function handleHelp(bot: TelegramBot, msg: TelegramBot.Message): Promise<void> {
@@ -21,11 +21,9 @@ export async function handleHelp(bot: TelegramBot, msg: TelegramBot.Message): Pr
   }
 
   if (user.status === 'pending') {
-    await bot.sendMessage(
-      chatId,
-      Messages.registrationPending + '\n\n' + Messages.help(),
-      { parse_mode: 'HTML' }
-    )
+    await bot.sendMessage(chatId, Messages.registrationPending + '\n\n' + Messages.help(), {
+      parse_mode: 'HTML'
+    })
     return
   }
 

@@ -212,23 +212,33 @@ const initSchema = (db: Database): void => {
   )`)
 
   // Indexes
-  db.run("CREATE INDEX IF NOT EXISTS idx_weighbridge_customer_date ON weighbridge(customer_id, date)")
-  db.run("CREATE INDEX IF NOT EXISTS idx_finance_customer_date ON finance(customer_id, date)")
-  db.run("CREATE INDEX IF NOT EXISTS idx_crates_customer_date ON crates(customer_id, date)")
-  db.run("CREATE INDEX IF NOT EXISTS idx_sync_queue_created ON sync_queue(created_at)")
-  db.run("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)")
-  db.run("CREATE INDEX IF NOT EXISTS idx_telegram_users_telegram_id ON telegram_users(telegram_id)")
-  db.run("CREATE INDEX IF NOT EXISTS idx_telegram_users_status ON telegram_users(status)")
-  db.run("CREATE INDEX IF NOT EXISTS idx_telegram_registrations_status ON telegram_registrations(status)")
-  db.run("CREATE INDEX IF NOT EXISTS idx_notification_queue_sent ON notification_queue(sent)")
-  db.run("CREATE INDEX IF NOT EXISTS idx_notification_queue_created ON notification_queue(created_at)")
+  db.run(
+    'CREATE INDEX IF NOT EXISTS idx_weighbridge_customer_date ON weighbridge(customer_id, date)'
+  )
+  db.run('CREATE INDEX IF NOT EXISTS idx_finance_customer_date ON finance(customer_id, date)')
+  db.run('CREATE INDEX IF NOT EXISTS idx_crates_customer_date ON crates(customer_id, date)')
+  db.run('CREATE INDEX IF NOT EXISTS idx_sync_queue_created ON sync_queue(created_at)')
+  db.run('CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)')
+  db.run('CREATE INDEX IF NOT EXISTS idx_telegram_users_telegram_id ON telegram_users(telegram_id)')
+  db.run('CREATE INDEX IF NOT EXISTS idx_telegram_users_status ON telegram_users(status)')
+  db.run(
+    'CREATE INDEX IF NOT EXISTS idx_telegram_registrations_status ON telegram_registrations(status)'
+  )
+  db.run('CREATE INDEX IF NOT EXISTS idx_notification_queue_sent ON notification_queue(sent)')
+  db.run(
+    'CREATE INDEX IF NOT EXISTS idx_notification_queue_created ON notification_queue(created_at)'
+  )
 
   // Seed default admin if not exists
   const res = db.exec("SELECT id FROM users WHERE username = 'admin'")
   if (res.length === 0 || res[0].values.length === 0) {
     const salt = bcrypt.genSaltSync(10)
     const hash = bcrypt.hashSync('admin123', salt)
-    db.run('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', ['admin', hash, 'admin'])
+    db.run('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', [
+      'admin',
+      hash,
+      'admin'
+    ])
   }
 
   // Seed default settings
@@ -270,7 +280,9 @@ const initSchema = (db: Database): void => {
     ['worker', 'update_task_status', 1]
   ]
 
-  const permStmt = db.prepare('INSERT OR IGNORE INTO role_permissions (role, permission, granted) VALUES (?, ?, ?)')
+  const permStmt = db.prepare(
+    'INSERT OR IGNORE INTO role_permissions (role, permission, granted) VALUES (?, ?, ?)'
+  )
   defaultPermissions.forEach(([role, permission, granted]) => {
     permStmt.run([role, permission, granted])
   })
@@ -301,7 +313,7 @@ export const initializeDatabase = async (force: boolean = false): Promise<Databa
 
   initSchema(db)
   await saveDatabase()
-  
+
   return db
 }
 

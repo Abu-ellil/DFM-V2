@@ -170,7 +170,9 @@ export class RegistrationHandler {
         userIdStmt.free()
 
         // Assign role
-        const roleStmt = db.prepare('INSERT INTO user_roles (user_id, role, assigned_by) VALUES (?, ?, ?)')
+        const roleStmt = db.prepare(
+          'INSERT INTO user_roles (user_id, role, assigned_by) VALUES (?, ?, ?)'
+        )
         roleStmt.bind([userIdResult.id, role, reviewerUserId])
         roleStmt.run()
         roleStmt.free()

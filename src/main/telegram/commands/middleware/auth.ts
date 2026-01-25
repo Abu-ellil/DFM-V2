@@ -29,7 +29,9 @@ export async function getUserByTelegramId(telegramId: number): Promise<TelegramU
 export async function updateUserLastInteraction(telegramId: number): Promise<void> {
   try {
     const db = getDb()
-    const stmt = db.prepare('UPDATE telegram_users SET last_interaction = CURRENT_TIMESTAMP WHERE telegram_id = ?')
+    const stmt = db.prepare(
+      'UPDATE telegram_users SET last_interaction = CURRENT_TIMESTAMP WHERE telegram_id = ?'
+    )
     stmt.bind([telegramId])
     stmt.run()
     stmt.free()

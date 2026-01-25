@@ -1,5 +1,5 @@
 import TelegramBot from 'node-telegram-bot-api'
-import { Messages, Keyboards } from '../../utils/messages'
+import { Messages, Keyboards } from '../utils/messages'
 import { Validator } from '../../utils/validator'
 import { getUserByTelegramId, updateUserLastInteraction } from '../middleware/auth'
 import { getDb, saveDatabase } from '../../../db'
@@ -29,18 +29,18 @@ export async function handleRegister(bot: TelegramBot, msg: TelegramBot.Message)
         parse_mode: 'HTML'
       })
     } else {
-      await bot.sendMessage(
-        chatId,
-        Messages.error('حسابك غير نشط. يرجى التواصل مع المشرف.'),
-        { parse_mode: 'HTML' }
-      )
+      await bot.sendMessage(chatId, Messages.error('حسابك غير نشط. يرجى التواصل مع المشرف.'), {
+        parse_mode: 'HTML'
+      })
     }
     return
   }
 
   // Check if there's already a pending registration
   const db = getDb()
-  const stmt = db.prepare('SELECT * FROM telegram_registrations WHERE telegram_id = ? AND status = ?')
+  const stmt = db.prepare(
+    'SELECT * FROM telegram_registrations WHERE telegram_id = ? AND status = ?'
+  )
   stmt.bind([telegramId, 'pending'])
 
   if (stmt.step()) {

@@ -1,5 +1,5 @@
 import TelegramBot from 'node-telegram-bot-api'
-import { Messages, Keyboards } from '../../utils/messages'
+import { Messages, Keyboards } from '../utils/messages'
 import { getUserByTelegramId, updateUserLastInteraction } from '../middleware/auth'
 
 export async function handleProfile(bot: TelegramBot, msg: TelegramBot.Message): Promise<void> {

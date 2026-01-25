@@ -1,6 +1,12 @@
 import TelegramBot from 'node-telegram-bot-api'
 import { handleStart } from './start'
-import { handleRegister, handleRegistrationText, handleRoleSelection, handleRegistrationConfirm, handleRegistrationCancel } from './register'
+import {
+  handleRegister,
+  handleRegistrationText,
+  handleRoleSelection,
+  handleRegistrationConfirm,
+  handleRegistrationCancel
+} from './register'
 import { handleHelp } from './help'
 import { handleStatus } from './status'
 import { handleProfile } from './profile'

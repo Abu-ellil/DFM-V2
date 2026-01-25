@@ -15,16 +15,19 @@ interface CardProps {
 
 export function Card({ children, className, title, extra }: CardProps) {
   return (
-    <div className={cn("bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden", className)}>
+    <div
+      className={cn(
+        'bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden',
+        className
+      )}
+    >
       {(title || extra) && (
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
           {title && <h3 className="text-lg font-bold text-slate-800 dark:text-white">{title}</h3>}
           {extra && <div>{extra}</div>}
         </div>
       )}
-      <div className="p-6">
-        {children}
-      </div>
+      <div className="p-6">{children}</div>
     </div>
   )
 }

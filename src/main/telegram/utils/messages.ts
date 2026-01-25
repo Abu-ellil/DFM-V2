@@ -256,7 +256,7 @@ ${task.description ? `<b>الوصف:</b> ${task.description}` : ''}
     })
 
     return message
-  },
+  }
 }
 
 // Helper functions

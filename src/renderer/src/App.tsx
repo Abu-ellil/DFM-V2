@@ -14,13 +14,13 @@ import Reports from './components/Reports'
 import Settings from './components/Settings'
 import Duplicates from './components/Duplicates'
 import CustomerDetails from './components/CustomerDetails'
-import { 
-  LayoutDashboard, 
-  Users, 
-  Scale, 
-  Package, 
-  Wallet, 
-  BarChart3, 
+import {
+  LayoutDashboard,
+  Users,
+  Scale,
+  Package,
+  Wallet,
+  BarChart3,
   Settings as SettingsIcon,
   LogOut,
   Menu,
@@ -86,11 +86,13 @@ function App() {
         return <Customers onViewCustomer={handleViewCustomer} />
       case 'customer-details':
         return selectedCustomerId ? (
-          <CustomerDetails 
-            customerId={selectedCustomerId} 
-            onBack={() => setActiveTab('customers')} 
+          <CustomerDetails
+            customerId={selectedCustomerId}
+            onBack={() => setActiveTab('customers')}
           />
-        ) : <Customers onViewCustomer={handleViewCustomer} />
+        ) : (
+          <Customers onViewCustomer={handleViewCustomer} />
+        )
       case 'weighbridge':
         return <Weighbridge />
       case 'crates':
@@ -109,9 +111,12 @@ function App() {
   }
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans" dir="rtl">
+    <div
+      className="flex h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans"
+      dir="rtl"
+    >
       {/* Sidebar */}
-      <aside 
+      <aside
         className={`${
           isSidebarOpen ? 'w-64' : 'w-20'
         } bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 transition-all duration-300 flex flex-col z-20 shadow-xl print:hidden`}
@@ -120,11 +125,13 @@ function App() {
         <div className="h-16 flex items-center justify-between px-4 border-b border-slate-100 dark:border-slate-800">
           {isSidebarOpen && (
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white font-bold">D</div>
+              <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white font-bold">
+                D
+              </div>
               <span className="font-bold text-lg tracking-tight">DATES V2</span>
             </div>
           )}
-          <button 
+          <button
             onClick={toggleSidebar}
             className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
           >
@@ -134,67 +141,67 @@ function App() {
 
         {/* Navigation */}
         <nav className="flex-1 py-4 overflow-y-auto px-2 space-y-1">
-          <NavItem 
-            icon={<LayoutDashboard size={20} />} 
-            label="الرئيسية" 
-            isOpen={isSidebarOpen} 
-            active={activeTab === 'dashboard'} 
+          <NavItem
+            icon={<LayoutDashboard size={20} />}
+            label="الرئيسية"
+            isOpen={isSidebarOpen}
+            active={activeTab === 'dashboard'}
             onClick={() => setActiveTab('dashboard')}
           />
-          <NavItem 
-            icon={<Scale size={20} />} 
-            label="الميزان" 
-            isOpen={isSidebarOpen} 
-            active={activeTab === 'weighbridge'} 
+          <NavItem
+            icon={<Scale size={20} />}
+            label="الميزان"
+            isOpen={isSidebarOpen}
+            active={activeTab === 'weighbridge'}
             onClick={() => setActiveTab('weighbridge')}
           />
-          <NavItem 
-            icon={<Users size={20} />} 
-            label="العملاء" 
-            isOpen={isSidebarOpen} 
-            active={activeTab === 'customers'} 
+          <NavItem
+            icon={<Users size={20} />}
+            label="العملاء"
+            isOpen={isSidebarOpen}
+            active={activeTab === 'customers'}
             onClick={() => setActiveTab('customers')}
           />
-          <NavItem 
-            icon={<Package size={20} />} 
-            label="الصناديق" 
-            isOpen={isSidebarOpen} 
-            active={activeTab === 'crates'} 
+          <NavItem
+            icon={<Package size={20} />}
+            label="الصناديق"
+            isOpen={isSidebarOpen}
+            active={activeTab === 'crates'}
             onClick={() => setActiveTab('crates')}
           />
-          <NavItem 
-            icon={<Wallet size={20} />} 
-            label="الحسابات" 
-            isOpen={isSidebarOpen} 
-            active={activeTab === 'finance'} 
+          <NavItem
+            icon={<Wallet size={20} />}
+            label="الحسابات"
+            isOpen={isSidebarOpen}
+            active={activeTab === 'finance'}
             onClick={() => setActiveTab('finance')}
           />
-          <NavItem 
-            icon={<BarChart3 size={20} />} 
-            label="التقارير" 
-            isOpen={isSidebarOpen} 
-            active={activeTab === 'reports'} 
+          <NavItem
+            icon={<BarChart3 size={20} />}
+            label="التقارير"
+            isOpen={isSidebarOpen}
+            active={activeTab === 'reports'}
             onClick={() => setActiveTab('reports')}
           />
-          <NavItem 
-            icon={<Copy size={20} />} 
-            label="العمليات المكررة" 
-            isOpen={isSidebarOpen} 
-            active={activeTab === 'duplicates'} 
+          <NavItem
+            icon={<Copy size={20} />}
+            label="العمليات المكررة"
+            isOpen={isSidebarOpen}
+            active={activeTab === 'duplicates'}
             onClick={() => setActiveTab('duplicates')}
           />
           <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
-            <NavItem 
-              icon={<SettingsIcon size={20} />} 
-              label="الإعدادات" 
-              isOpen={isSidebarOpen} 
-              active={activeTab === 'settings'} 
+            <NavItem
+              icon={<SettingsIcon size={20} />}
+              label="الإعدادات"
+              isOpen={isSidebarOpen}
+              active={activeTab === 'settings'}
               onClick={() => setActiveTab('settings')}
             />
-            <NavItem 
-              icon={<LogOut size={20} />} 
-              label="خروج" 
-              isOpen={isSidebarOpen} 
+            <NavItem
+              icon={<LogOut size={20} />}
+              label="خروج"
+              isOpen={isSidebarOpen}
               onClick={logout}
               className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
             />
@@ -204,12 +211,10 @@ function App() {
         {/* Footer Info */}
         {isSidebarOpen && (
           <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex flex-col items-center gap-2">
-            <div className="text-[10px] text-slate-400 text-center">
-              الإصدار {version}
-            </div>
-            <a 
-              href="https://wa.me/201221089249" 
-              target="_blank" 
+            <div className="text-[10px] text-slate-400 text-center">الإصدار {version}</div>
+            <a
+              href="https://wa.me/201221089249"
+              target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline font-bold"
             >
@@ -241,7 +246,9 @@ function App() {
             <div className="flex items-center gap-3">
               <div className="text-left hidden sm:block">
                 <p className="text-sm font-bold leading-none">{user.username}</p>
-                <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-wider">{user.role}</p>
+                <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-wider">
+                  {user.role}
+                </p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white font-bold shadow-lg shadow-emerald-500/20">
                 {user.username.charAt(0).toUpperCase()}
@@ -260,17 +267,19 @@ function App() {
   )
 }
 
-function NavItem({ icon, label, isOpen, active = false, onClick, className = "" }: any) {
+function NavItem({ icon, label, isOpen, active = false, onClick, className = '' }: any) {
   return (
-    <button 
+    <button
       onClick={onClick}
       className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group ${
-        active 
-          ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20' 
+        active
+          ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
           : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
       } ${className}`}
     >
-      <div className={`${active ? 'text-white' : 'group-hover:text-emerald-600'} transition-colors`}>
+      <div
+        className={`${active ? 'text-white' : 'group-hover:text-emerald-600'} transition-colors`}
+      >
         {icon}
       </div>
       {isOpen && <span className="font-bold text-sm tracking-wide">{label}</span>}

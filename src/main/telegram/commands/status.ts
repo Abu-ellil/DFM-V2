@@ -1,5 +1,5 @@
 import TelegramBot from 'node-telegram-bot-api'
-import { Messages } from '../../utils/messages'
+import { Messages } from '../utils/messages'
 import { getUserByTelegramId, updateUserLastInteraction } from '../middleware/auth'
 import { getDb } from '../../../db'
 
@@ -10,18 +10,16 @@ export async function handleStatus(bot: TelegramBot, msg: TelegramBot.Message): 
   if (!telegramId) {
     await bot.sendMessage(chatId, Messages.error('تعذر الحصول على معرف المستخدم'))
     return
- }
+  }
 
   await updateUserLastInteraction(telegramId)
 
   const user = await getUserByTelegramId(telegramId)
 
   if (!user || user.status !== 'active') {
-    await bot.sendMessage(
-      chatId,
-      Messages.error('يجب أن تكون مسجلاً ونشطاً لعرض حالة النظام'),
-      { parse_mode: 'HTML' }
-    )
+    await bot.sendMessage(chatId, Messages.error('يجب أن تكون مسجلاً ونشطاً لعرض حالة النظام'), {
+      parse_mode: 'HTML'
+    })
     return
   }
 
@@ -29,12 +27,16 @@ export async function handleStatus(bot: TelegramBot, msg: TelegramBot.Message): 
     const db = getDb()
 
     // Get user statistics
-    const activeUsersStmt = db.prepare("SELECT COUNT(*) as count FROM telegram_users WHERE status = 'active'")
+    const activeUsersStmt = db.prepare(
+      "SELECT COUNT(*) as count FROM telegram_users WHERE status = 'active'"
+    )
     activeUsersStmt.step()
     const activeUsers = (activeUsersStmt.getAsObject() as any).count
     activeUsersStmt.free()
 
-    const pendingUsersStmt = db.prepare("SELECT COUNT(*) as count FROM telegram_users WHERE status = 'pending'")
+    const pendingUsersStmt = db.prepare(
+      "SELECT COUNT(*) as count FROM telegram_users WHERE status = 'pending'"
+    )
     pendingUsersStmt.step()
     const pendingUsers = (pendingUsersStmt.getAsObject() as any).count
     pendingUsersStmt.free()
@@ -63,21 +65,21 @@ export async function handleStatus(bot: TelegramBot, msg: TelegramBot.Message): 
 
     // Get notification statistics
     const pendingNotifStmt = db.prepare(
-      "SELECT COUNT(*) as count FROM notification_queue WHERE sent = 0"
+      'SELECT COUNT(*) as count FROM notification_queue WHERE sent = 0'
     )
     pendingNotifStmt.step()
     const pendingNotifications = (pendingNotifStmt.getAsObject() as any).count
     pendingNotifStmt.free()
 
     const sentNotifStmt = db.prepare(
-      "SELECT COUNT(*) as count FROM notification_queue WHERE sent = 1"
+      'SELECT COUNT(*) as count FROM notification_queue WHERE sent = 1'
     )
     sentNotifStmt.step()
     const sentNotifications = (sentNotifStmt.getAsObject() as any).count
     sentNotifStmt.free()
 
     const failedNotifStmt = db.prepare(
-      "SELECT COUNT(*) as count FROM notification_queue WHERE sent = 0 AND error_message IS NOT NULL"
+      'SELECT COUNT(*) as count FROM notification_queue WHERE sent = 0 AND error_message IS NOT NULL'
     )
     failedNotifStmt.step()
     const failedNotifications = (failedNotifStmt.getAsObject() as any).count

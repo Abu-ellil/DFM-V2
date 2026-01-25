@@ -142,11 +142,7 @@ export class Validator {
   }
 
   // Check if within quiet hours
-  static isWithinQuietHours(
-    currentTime: Date,
-    quietStart?: string,
-    quietEnd?: string
-  ): boolean {
+  static isWithinQuietHours(currentTime: Date, quietStart?: string, quietEnd?: string): boolean {
     if (!quietStart || !quietEnd) return false
 
     const [startHour, startMinute] = quietStart.split(':').map(Number)

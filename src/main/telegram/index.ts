@@ -120,7 +120,9 @@ export function isBotRunningStatus(): boolean {
 /**
  * Update bot token and restart
  */
-export async function updateBotToken(newToken: string): Promise<{ success: boolean; message?: string }> {
+export async function updateBotToken(
+  newToken: string
+): Promise<{ success: boolean; message?: string }> {
   try {
     const db = getDb()
 
@@ -153,14 +155,16 @@ export async function testBotConnection(token?: string): Promise<{
   botInfo?: any
 }> {
   try {
-    const testToken = token || (() => {
-      const db = getDb()
-      const stmt = db.prepare("SELECT value FROM settings WHERE key = 'telegram_token'")
-      stmt.step()
-      const result = stmt.getAsObject() as any
-      stmt.free()
-      return result?.value
-    })()
+    const testToken =
+      token ||
+      (() => {
+        const db = getDb()
+        const stmt = db.prepare("SELECT value FROM settings WHERE key = 'telegram_token'")
+        stmt.step()
+        const result = stmt.getAsObject() as any
+        stmt.free()
+        return result?.value
+      })()
 
     if (!testToken) {
       return { success: false, message: 'No bot token provided' }

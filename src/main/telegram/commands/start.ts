@@ -1,5 +1,5 @@
 import TelegramBot from 'node-telegram-bot-api'
-import { Messages, Keyboards } from '../../utils/messages'
+import { Messages, Keyboards } from '../utils/messages'
 import { getUserByTelegramId, updateUserLastInteraction } from '../middleware/auth'
 
 export async function handleStart(bot: TelegramBot, msg: TelegramBot.Message): Promise<void> {
@@ -20,9 +20,17 @@ export async function handleStart(bot: TelegramBot, msg: TelegramBot.Message): P
 
   // Check if user exists
   if (!user) {
+    await bot.sendMessage(chatId, Messages.welcome(firstName) + '\n\n' + Messages.notRegistered, {
+      parse_mode: 'HTML'
+    })
+    return
+  }
+
+  // Check if user is pending
+  if (user.status === 'pending') {
     await bot.sendMessage(
       chatId,
-      Messages.welcome(firstName) + '\n\n' + Messages.notRegistered,
+      Messages.welcome(firstName) + '\n\n' + Messages.registrationPending,
       {
         parse_mode: 'HTML'
       }
@@ -30,19 +38,13 @@ export async function handleStart(bot: TelegramBot, msg: TelegramBot.Message): P
     return
   }
 
-  // Check if user is pending
-  if (user.status === 'pending') {
-    await bot.sendMessage(chatId, Messages.welcome(firstName) + '\n\n' + Messages.registrationPending, {
-      parse_mode: 'HTML'
-    })
-    return
-  }
-
   // Check if user is inactive or suspended
   if (user.status === 'inactive' || user.status === 'suspended') {
     await bot.sendMessage(
       chatId,
-      Messages.error(`حسابك ${user.status === 'suspended' ? 'موقوف' : 'غير نشط'}. يرجى التواصل مع المشرف.`)
+      Messages.error(
+        `حسابك ${user.status === 'suspended' ? 'موقوف' : 'غير نشط'}. يرجى التواصل مع المشرف.`
+      )
     )
     return
   }

@@ -291,18 +291,20 @@ export class NotificationHandler {
     try {
       const db = getDb()
 
-      const pendingStmt = db.prepare("SELECT COUNT(*) as count FROM notification_queue WHERE sent = 0")
+      const pendingStmt = db.prepare(
+        'SELECT COUNT(*) as count FROM notification_queue WHERE sent = 0'
+      )
       pendingStmt.step()
       const pending = (pendingStmt.getAsObject() as any).count
       pendingStmt.free()
 
-      const sentStmt = db.prepare("SELECT COUNT(*) as count FROM notification_queue WHERE sent = 1")
+      const sentStmt = db.prepare('SELECT COUNT(*) as count FROM notification_queue WHERE sent = 1')
       sentStmt.step()
       const sent = (sentStmt.getAsObject() as any).count
       sentStmt.free()
 
       const failedStmt = db.prepare(
-        "SELECT COUNT(*) as count FROM notification_queue WHERE sent = 0 AND error_message IS NOT NULL"
+        'SELECT COUNT(*) as count FROM notification_queue WHERE sent = 0 AND error_message IS NOT NULL'
       )
       failedStmt.step()
       const failed = (failedStmt.getAsObject() as any).count

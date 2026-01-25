@@ -61,18 +61,12 @@ export const Keyboards = {
       ])
     }
 
-    keyboard.push([
-      { text: '👤 عرض التفاصيل', callback_data: `user_details_${userId}` }
-    ])
+    keyboard.push([{ text: '👤 عرض التفاصيل', callback_data: `user_details_${userId}` }])
 
     if (status === 'active') {
-      keyboard.push([
-        { text: '⏸ تعليق', callback_data: `user_suspend_${userId}` }
-      ])
+      keyboard.push([{ text: '⏸ تعليق', callback_data: `user_suspend_${userId}` }])
     } else if (status === 'suspended') {
-      keyboard.push([
-        { text: '▶️ تفعيل', callback_data: `user_activate_${userId}` }
-      ])
+      keyboard.push([{ text: '▶️ تفعيل', callback_data: `user_activate_${userId}` }])
     }
 
     keyboard.push([{ text: '🔙 العودة', callback_data: 'admin_users' }])
@@ -92,9 +86,7 @@ export const Keyboards = {
       keyboard.push([
         { text: '✅ قبول (عامل)', callback_data: `reg_approve_worker_${registrationId}` }
       ])
-      keyboard.push([
-        { text: '❌ رفض', callback_data: `reg_reject_${registrationId}` }
-      ])
+      keyboard.push([{ text: '❌ رفض', callback_data: `reg_reject_${registrationId}` }])
     }
 
     keyboard.push([{ text: '🔙 العودة', callback_data: 'admin_registrations' }])
@@ -128,13 +120,9 @@ export const Keyboards = {
     const keyboard: InlineKeyboard = []
 
     if (status === 'pending') {
-      keyboard.push([
-        { text: '▶️ بدء العمل', callback_data: `task_start_${taskId}` }
-      ])
+      keyboard.push([{ text: '▶️ بدء العمل', callback_data: `task_start_${taskId}` }])
     } else if (status === 'in_progress') {
-      keyboard.push([
-        { text: '✅ إكمال', callback_data: `task_complete_${taskId}` }
-      ])
+      keyboard.push([{ text: '✅ إكمال', callback_data: `task_complete_${taskId}` }])
     }
 
     keyboard.push([{ text: '🔙 العودة', callback_data: 'tasks_my' }])

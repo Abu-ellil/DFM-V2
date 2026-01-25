@@ -11,5 +11,5 @@ export const useAppStore = create<AppState>((set) => ({
   version: '2.0.0',
   isSidebarOpen: true,
   toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
-  setVersion: (version) => set({ version }),
+  setVersion: (version) => set({ version })
 }))

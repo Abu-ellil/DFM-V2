@@ -91,7 +91,9 @@ export default function TelegramUsers() {
       admin: 'مشرف'
     }
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-bold ${badges[role as keyof typeof badges] || badges.worker}`}>
+      <span
+        className={`px-2 py-1 rounded-full text-xs font-bold ${badges[role as keyof typeof badges] || badges.worker}`}
+      >
         {names[role] || role}
       </span>
     )
@@ -111,7 +113,9 @@ export default function TelegramUsers() {
       inactive: 'غير نشط'
     }
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-bold ${badges[status as keyof typeof badges] || badges.inactive}`}>
+      <span
+        className={`px-2 py-1 rounded-full text-xs font-bold ${badges[status as keyof typeof badges] || badges.inactive}`}
+      >
         {names[status] || status}
       </span>
     )
@@ -213,9 +217,7 @@ export default function TelegramUsers() {
                         <span className="font-mono">@{user.username}</span>
                       </div>
                     )}
-                    {user.phone && (
-                      <div>📱 {user.phone}</div>
-                    )}
+                    {user.phone && <div>📱 {user.phone}</div>}
                     <div className="text-xs">معرف تيليجرام: {user.telegram_id}</div>
                     <div className="text-xs">
                       آخر تفاعل: {new Date(user.last_interaction).toLocaleDateString('ar-SA')}
@@ -254,7 +256,10 @@ export default function TelegramUsers() {
                   )}
                   <button
                     onClick={() =>
-                      handleDeleteUser(user.telegram_id, `${user.first_name || ''} ${user.last_name || ''}`)
+                      handleDeleteUser(
+                        user.telegram_id,
+                        `${user.first_name || ''} ${user.last_name || ''}`
+                      )
                     }
                     className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                     title="حذف"
