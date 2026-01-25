@@ -14,10 +14,10 @@ asarUnpack:
 win:
   executableName: DFM-V2
   target:
-    - target: nsis
+    - target: portable
       arch:
         - x64
-    - target: zip
+    - target: nsis
       arch:
         - x64
 nsis:
@@ -25,6 +25,10 @@ nsis:
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+portable:
+  artifactName: ${name}-${version}-portable.${ext}
 mac:
   target:
     - target: dmg
@@ -54,5 +58,3 @@ npmRebuild: false
 publish:
   provider: github
   releaseType: release
-electronDownload:
-  mirror: https://npmmirror.com/mirrors/electron/
