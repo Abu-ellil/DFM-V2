@@ -1,5 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { InlineKeyboard } from 'node-telegram-bot-api'
-import { UserRole } from '../types'
 
 export const Keyboards = {
   // Main menu

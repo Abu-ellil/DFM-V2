@@ -1,6 +1,7 @@
 import TelegramBot from 'node-telegram-bot-api'
-import { Messages, Keyboards } from '../utils/messages'
-import { getUserByTelegramId, updateUserLastInteraction } from '../middleware/auth'
+import { Messages } from '../utils/messages'
+import { Keyboards } from '../utils/keyboard'
+import { getUserByTelegramId, updateUserLastInteraction } from './middleware/auth'
 
 export async function handleStart(bot: TelegramBot, msg: TelegramBot.Message): Promise<void> {
   const chatId = msg.chat.id

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import TelegramBot from 'node-telegram-bot-api'
 import { handleStart } from './start'
 import {
@@ -12,7 +13,7 @@ import { handleStatus } from './status'
 import { handleProfile } from './profile'
 import { getUserByTelegramId } from './middleware/auth'
 import { checkRateLimit, getRateLimitMessage } from './middleware/rateLimit'
-import { hasPermission, isAdmin } from './middleware/roleCheck'
+import { isAdmin } from './middleware/roleCheck'
 
 export function registerCommands(bot: TelegramBot): void {
   // /start command
@@ -23,7 +24,7 @@ export function registerCommands(bot: TelegramBot): void {
     // Check rate limit
     const rateLimit = checkRateLimit(telegramId)
     if (!rateLimit.allowed) {
-      await bot.sendMessage(msg.chat.id, getRateLimitMessage(rateLimit.remaining))
+      await bot.sendMessage(msg.chat.id, getRateLimitMessage())
       return
     }
 
@@ -38,7 +39,7 @@ export function registerCommands(bot: TelegramBot): void {
     // Check rate limit
     const rateLimit = checkRateLimit(telegramId)
     if (!rateLimit.allowed) {
-      await bot.sendMessage(msg.chat.id, getRateLimitMessage(rateLimit.remaining))
+      await bot.sendMessage(msg.chat.id, getRateLimitMessage())
       return
     }
 
@@ -53,7 +54,7 @@ export function registerCommands(bot: TelegramBot): void {
     // Check rate limit
     const rateLimit = checkRateLimit(telegramId)
     if (!rateLimit.allowed) {
-      await bot.sendMessage(msg.chat.id, getRateLimitMessage(rateLimit.remaining))
+      await bot.sendMessage(msg.chat.id, getRateLimitMessage())
       return
     }
 
@@ -68,7 +69,7 @@ export function registerCommands(bot: TelegramBot): void {
     // Check rate limit
     const rateLimit = checkRateLimit(telegramId)
     if (!rateLimit.allowed) {
-      await bot.sendMessage(msg.chat.id, getRateLimitMessage(rateLimit.remaining))
+      await bot.sendMessage(msg.chat.id, getRateLimitMessage())
       return
     }
 
@@ -83,7 +84,7 @@ export function registerCommands(bot: TelegramBot): void {
     // Check rate limit
     const rateLimit = checkRateLimit(telegramId)
     if (!rateLimit.allowed) {
-      await bot.sendMessage(msg.chat.id, getRateLimitMessage(rateLimit.remaining))
+      await bot.sendMessage(msg.chat.id, getRateLimitMessage())
       return
     }
 
@@ -99,13 +100,14 @@ export function registerCommands(bot: TelegramBot): void {
     if (msg.text.startsWith('/')) return
 
     // Check if user is in registration flow
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { hasRegistrationSession } = require('./register')
     if (!hasRegistrationSession(telegramId)) return
 
     // Check rate limit
     const rateLimit = checkRateLimit(telegramId)
     if (!rateLimit.allowed) {
-      await bot.sendMessage(msg.chat.id, getRateLimitMessage(rateLimit.remaining))
+      await bot.sendMessage(msg.chat.id, getRateLimitMessage())
       return
     }
 
@@ -123,7 +125,7 @@ export function registerCommands(bot: TelegramBot): void {
     const rateLimit = checkRateLimit(telegramId)
     if (!rateLimit.allowed) {
       await bot.answerCallbackQuery(query.id, {
-        text: getRateLimitMessage(rateLimit.remaining)
+        text: getRateLimitMessage()
       })
       return
     }
@@ -200,7 +202,6 @@ export function registerAdminCommands(bot: TelegramBot): void {
     }
 
     const registrationId = parseInt(match[1])
-    const reason = match[2] || ''
 
     if (isNaN(registrationId)) {
       await bot.sendMessage(msg.chat.id, '❌ معرف الطلب غير صالح')

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { create } from 'zustand'
 
 interface FinanceTransaction {
@@ -29,7 +30,7 @@ interface FinanceStore {
   deleteTransaction: (id: number) => Promise<{ success: boolean; message?: string }>
 }
 
-export const useFinanceStore = create<FinanceStore>((set, _get) => ({
+export const useFinanceStore = create<FinanceStore>((set) => ({
   transactions: [],
   summary: [],
   isLoading: false,
@@ -57,7 +58,7 @@ export const useFinanceStore = create<FinanceStore>((set, _get) => ({
         set({ transactions, summary })
       }
       return result
-    } catch (error) {
+    } catch {
       return { success: false, message: 'خطأ في الاتصال بالقاعدة' }
     }
   },
@@ -72,7 +73,7 @@ export const useFinanceStore = create<FinanceStore>((set, _get) => ({
         set({ transactions, summary })
       }
       return result
-    } catch (error) {
+    } catch {
       return { success: false, message: 'خطأ في الاتصال بالقاعدة' }
     }
   },
@@ -87,7 +88,7 @@ export const useFinanceStore = create<FinanceStore>((set, _get) => ({
         set({ transactions, summary })
       }
       return result
-    } catch (error) {
+    } catch {
       return { success: false, message: 'خطأ في الاتصال بالقاعدة' }
     }
   }

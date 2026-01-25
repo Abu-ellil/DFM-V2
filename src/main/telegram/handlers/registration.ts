@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import TelegramBot from 'node-telegram-bot-api'
 import { TelegramUser, RegistrationRequest, UserRole } from '../types'
 import { getDb, saveDatabase } from '../../db'

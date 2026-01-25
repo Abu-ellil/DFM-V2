@@ -17,6 +17,6 @@ export function checkRateLimit(telegramId: number): RateLimitResult {
   }
 }
 
-export function getRateLimitMessage(remaining: number): string {
+export function getRateLimitMessage(): string {
   return `⚠️ لقد تجاوزت الحد المسموح من الطلبات. يرجى المحاولة مرة أخرى بعد دقيقة واحدة.`
 }

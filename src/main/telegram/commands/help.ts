@@ -1,6 +1,6 @@
 import TelegramBot from 'node-telegram-bot-api'
 import { Messages } from '../utils/messages'
-import { getUserByTelegramId, updateUserLastInteraction } from '../middleware/auth'
+import { getUserByTelegramId, updateUserLastInteraction } from './middleware/auth'
 
 export async function handleHelp(bot: TelegramBot, msg: TelegramBot.Message): Promise<void> {
   const chatId = msg.chat.id

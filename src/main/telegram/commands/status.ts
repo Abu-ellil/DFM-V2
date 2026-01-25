@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import TelegramBot from 'node-telegram-bot-api'
 import { Messages } from '../utils/messages'
-import { getUserByTelegramId, updateUserLastInteraction } from '../middleware/auth'
-import { getDb } from '../../../db'
+import { getUserByTelegramId, updateUserLastInteraction } from './middleware/auth'
+import { getDb } from '../../db'
 
 export async function handleStatus(bot: TelegramBot, msg: TelegramBot.Message): Promise<void> {
   const chatId = msg.chat.id

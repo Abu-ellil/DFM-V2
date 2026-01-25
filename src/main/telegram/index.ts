@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import TelegramBot from 'node-telegram-bot-api'
 import { registerCommands, registerAdminCommands } from './commands'
 import { initNotificationHandler } from './handlers/notifications'

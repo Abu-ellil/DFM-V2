@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { TelegramUser, UserRole, Permission } from '../../types'
 import { getDb } from '../../../db'
 

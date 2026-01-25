@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { create } from 'zustand'
 
 interface Transaction {
@@ -45,7 +46,7 @@ export const useWeighbridgeStore = create<WeighbridgeStore>((set) => ({
         set({ transactions })
       }
       return result
-    } catch (error) {
+    } catch {
       return { success: false, message: 'خطأ في الاتصال بالقاعدة' }
     }
   }

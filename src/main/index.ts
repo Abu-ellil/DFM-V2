@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'path'
 import { writeFile, readFile } from 'fs/promises'
@@ -17,12 +19,12 @@ import {
   startTelegramBot,
   stopTelegramBot,
   restartTelegramBot,
-  updateBotToken,
   testBotConnection,
   getBotStats
 } from './telegram'
 
 // Import license manager from root
+/* eslint-disable @typescript-eslint/no-require-imports */
 // @ts-ignore (license.js is in root)
 import licenseManager = require('../../license.js')
 
@@ -181,7 +183,7 @@ ipcMain.handle('dateTypes:getAll', async () => {
       columns.forEach((col, i) => (obj[col] = row[i]))
       return obj
     })
-  } catch (error) {
+  } catch {
     return []
   }
 })
@@ -195,7 +197,7 @@ ipcMain.handle('dateTypes:create', async (_event, name) => {
     stmt.free()
     await saveDatabase()
     return { success: true }
-  } catch (error) {
+  } catch {
     return { success: false, message: 'فشل إضافة النوع' }
   }
 })
@@ -209,7 +211,7 @@ ipcMain.handle('dateTypes:delete', async (_event, id) => {
     stmt.free()
     await saveDatabase()
     return { success: true }
-  } catch (error) {
+  } catch {
     return { success: false, message: 'فشل حذف النوع' }
   }
 })
@@ -225,7 +227,7 @@ ipcMain.handle('crateTypes:getAll', async () => {
       columns.forEach((col, i) => (obj[col] = row[i]))
       return obj
     })
-  } catch (error) {
+  } catch {
     return []
   }
 })
@@ -239,7 +241,7 @@ ipcMain.handle('crateTypes:create', async (_event, { name, weight }) => {
     stmt.free()
     await saveDatabase()
     return { success: true }
-  } catch (error) {
+  } catch {
     return { success: false, message: 'فشل إضافة نوع الصندوق' }
   }
 })
@@ -253,7 +255,7 @@ ipcMain.handle('crateTypes:delete', async (_event, id) => {
     stmt.free()
     await saveDatabase()
     return { success: true }
-  } catch (error) {
+  } catch {
     return { success: false, message: 'فشل حذف نوع الصندوق' }
   }
 })
@@ -270,7 +272,7 @@ ipcMain.handle('supervisors:getAll', async () => {
       columns.forEach((col, i) => (obj[col] = row[i]))
       return obj
     })
-  } catch (error) {
+  } catch {
     return []
   }
 })
@@ -284,7 +286,7 @@ ipcMain.handle('supervisors:create', async (_event, name) => {
     stmt.free()
     await saveDatabase()
     return { success: true }
-  } catch (error) {
+  } catch {
     return { success: false, message: 'فشل إضافة المشرف' }
   }
 })
@@ -298,7 +300,7 @@ ipcMain.handle('supervisors:delete', async (_event, id) => {
     stmt.free()
     await saveDatabase()
     return { success: true }
-  } catch (error) {
+  } catch {
     return { success: false, message: 'فشل حذف المشرف' }
   }
 })

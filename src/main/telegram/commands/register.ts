@@ -1,9 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import TelegramBot from 'node-telegram-bot-api'
-import { Messages, Keyboards } from '../utils/messages'
-import { Validator } from '../../utils/validator'
-import { getUserByTelegramId, updateUserLastInteraction } from '../middleware/auth'
-import { getDb, saveDatabase } from '../../../db'
-import { RegistrationSession, RegistrationRequest } from '../../types'
+import { Messages } from '../utils/messages'
+import { Keyboards } from '../utils/keyboard'
+import { Validator } from '../utils/validator'
+import { getUserByTelegramId, updateUserLastInteraction } from './middleware/auth'
+import { getDb, saveDatabase } from '../../db'
+import { RegistrationSession, RegistrationRequest } from '../types'
 
 // Store registration sessions in memory
 const registrationSessions = new Map<number, RegistrationSession>()

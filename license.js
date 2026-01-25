@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { machineIdSync } = require('node-machine-id')
-const { readFileSync, writeFileSync, existsSync } = require('fs')
+const { readFileSync, writeFileSync, existsSync, unlinkSync } = require('fs')
 const { join } = require('path')
 const crypto = require('crypto')
 

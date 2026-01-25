@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ElectronAPI } from '@electron-toolkit/preload'
 
 declare global {
@@ -66,11 +67,27 @@ declare global {
         }) => Promise<{ success: boolean; message?: string }>
       }
       telegram: {
-        send: (data: {
-          token: string
-          chatId: string
-          message: string
-        }) => Promise<{ success: boolean }>
+        send: (data: { token: string; chatId: string; message: string }) => Promise<{ success: boolean; message?: string }>
+        sendReport: () => Promise<{ success: boolean; message?: string }>
+        startBot: () => Promise<{ success: boolean; message?: string }>
+        stopBot: () => Promise<{ success: boolean; message?: string }>
+        restartBot: () => Promise<{ success: boolean; message?: string }>
+        testConnection: (token?: string) => Promise<{ success: boolean; message?: string; botInfo?: any }>
+        getStats: () => Promise<any>
+        getUsers: (filters?: any) => Promise<{ success: boolean; data: any[]; message?: string }>
+        updateUser: (telegramId: number, data: any) => Promise<{ success: boolean; message?: string }>
+        deleteUser: (telegramId: number) => Promise<{ success: boolean; message?: string }>
+        getRegistrations: (filters?: any) => Promise<{ success: boolean; data: any[]; message?: string }>
+        approveRegistration: (
+          registrationId: number,
+          role: string,
+          reviewerUserId: number
+        ) => Promise<{ success: boolean; message?: string }>
+        rejectRegistration: (
+          registrationId: number,
+          reason?: string,
+          reviewerUserId?: number
+        ) => Promise<{ success: boolean; message?: string }>
       }
       license: {
         getInfo: () => Promise<any>

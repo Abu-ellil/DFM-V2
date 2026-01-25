@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Telegram User Types
 export interface TelegramUser {
   id: number
@@ -7,6 +8,7 @@ export interface TelegramUser {
   last_name?: string
   phone?: string
   user_id?: number
+  role?: string
   status: 'pending' | 'active' | 'inactive' | 'suspended'
   registration_date: string
   last_interaction: string

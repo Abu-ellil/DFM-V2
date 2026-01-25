@@ -1,5 +1,4 @@
-import { InlineKeyboard } from 'node-telegram-bot-api'
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export const Messages = {
   // Welcome & Start
   welcome: (name: string = '') => `
