@@ -1,15 +1,35 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-const { machineIdSync } = require('node-machine-id')
-const { readFileSync, writeFileSync, existsSync, unlinkSync } = require('fs')
-const { join } = require('path')
-const crypto = require('crypto')
+import { machineIdSync } from 'node-machine-id'
+import { readFileSync, writeFileSync, existsSync, unlinkSync } from 'fs'
+import { join } from 'path'
+import crypto from 'crypto'
+import { app } from 'electron'
+import { is } from '@electron-toolkit/utils'
 
-const LICENSE_FILE = join(__dirname, '.license')
+const getLicenseFilePath = (): string => {
+  if (is.dev) {
+    return join(app.getAppPath(), '.license')
+  }
+  return join(app.getPath('userData'), '.license')
+}
+
+const LICENSE_FILE = getLicenseFilePath()
 
 // Must match the website's secret key
 const SECRET_KEY = process.env.LICENSE_SECRET_KEY || 'DateFactory2024SecretKey#$%^&*()!@#'
 
-function getMachineId() {
+export interface LicenseInfo {
+  licensed: boolean
+  machineId: string
+  licenseKey?: string
+  factoryName?: string
+  activatedAt?: string
+  expiryDate?: string
+  lastOnlineCheck?: string
+  gracePeriodRemaining?: number | null
+  needsOnlineCheck?: boolean
+}
+
+export function getMachineId(): string {
   try {
     const id = machineIdSync()
     // Shorten to 16 characters to match the trial request website requirement
@@ -20,7 +40,7 @@ function getMachineId() {
   }
 }
 
-function getLicenseInfo() {
+export function getLicenseInfo(): LicenseInfo {
   try {
     if (!existsSync(LICENSE_FILE)) {
       return { licensed: false, machineId: getMachineId() }
@@ -29,13 +49,13 @@ function getLicenseInfo() {
     const data = JSON.parse(readFileSync(LICENSE_FILE, 'utf-8'))
 
     // Calculate grace period remaining
-    let gracePeriodRemaining = null
+    let gracePeriodRemaining: number | null = null
     let needsOnlineCheck = false
 
     if (data.lastOnlineCheck) {
       const lastCheck = new Date(data.lastOnlineCheck)
       const now = new Date()
-      const daysSinceCheck = (now - lastCheck) / (1000 * 60 * 60 * 24)
+      const daysSinceCheck = (now.getTime() - lastCheck.getTime()) / (1000 * 60 * 60 * 24)
       const GRACE_PERIOD_DAYS = 90
 
       gracePeriodRemaining = Math.max(0, GRACE_PERIOD_DAYS - daysSinceCheck)
@@ -63,7 +83,7 @@ function getLicenseInfo() {
  * Validate license key format and verify it matches the current machine
  * Format: XXXX-XXXX-XXXX-XXXX-DD (DD = duration code: 4D, 1Y, etc.)
  */
-function validateLicense(licenseKey) {
+export function validateLicense(licenseKey: string): boolean {
   try {
     const currentMachineId = getMachineId()
 
@@ -126,7 +146,7 @@ function validateLicense(licenseKey) {
 /**
  * Calculate expiry date based on duration code
  */
-function calculateExpiryDate(durationCode) {
+function calculateExpiryDate(durationCode: string): Date {
   const now = new Date()
 
   // Parse duration code (e.g., "4D" = 4 days, "1Y" = 1 year)
@@ -149,7 +169,7 @@ function calculateExpiryDate(durationCode) {
   }
 }
 
-function saveLicense(licenseKey, factoryName) {
+export function saveLicense(licenseKey: string, factoryName: string): boolean {
   try {
     if (!validateLicense(licenseKey)) {
       console.log('Failed to save license: Validation failed')
@@ -181,7 +201,7 @@ function saveLicense(licenseKey, factoryName) {
 /**
  * Verify license with the server (for blocking/revoking)
  */
-async function verifyLicenseOnline(licenseKey, machineId) {
+async function verifyLicenseOnline(licenseKey: string, machineId: string): Promise<any> {
   try {
     const VERIFY_URL =
       process.env.LICENSE_VERIFY_URL ||
@@ -190,8 +210,7 @@ async function verifyLicenseOnline(licenseKey, machineId) {
     const response = await fetch(VERIFY_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ licenseKey, machineId }),
-      timeout: 10000 // 10 second timeout
+      body: JSON.stringify({ licenseKey, machineId })
     })
 
     const result = await response.json()
@@ -209,7 +228,7 @@ async function verifyLicenseOnline(licenseKey, machineId) {
 /**
  * Check if online verification is needed (once every 7 days)
  */
-function needsOnlineVerification() {
+function needsOnlineVerification(): boolean {
   try {
     if (!existsSync(LICENSE_FILE)) {
       return false
@@ -222,7 +241,7 @@ function needsOnlineVerification() {
 
     const lastCheck = new Date(data.lastOnlineCheck)
     const now = new Date()
-    const daysSinceLastCheck = (now - lastCheck) / (1000 * 60 * 60 * 24)
+    const daysSinceLastCheck = (now.getTime() - lastCheck.getTime()) / (1000 * 60 * 60 * 24)
 
     return daysSinceLastCheck >= 7 // Check every 7 days
   } catch (error) {
@@ -232,9 +251,9 @@ function needsOnlineVerification() {
 }
 
 /**
- * Check if grace period has expired (allow 14 days offline)
+ * Check if grace period has expired (allow 90 days offline)
  */
-function isGracePeriodExpired() {
+function isGracePeriodExpired(): boolean {
   try {
     if (!existsSync(LICENSE_FILE)) {
       return false
@@ -247,7 +266,7 @@ function isGracePeriodExpired() {
 
     const lastCheck = new Date(data.lastOnlineCheck)
     const now = new Date()
-    const daysSinceLastCheck = (now - lastCheck) / (1000 * 60 * 60 * 24)
+    const daysSinceLastCheck = (now.getTime() - lastCheck.getTime()) / (1000 * 60 * 60 * 24)
 
     // Allow 90 days offline before blocking
     const GRACE_PERIOD_DAYS = 90
@@ -268,7 +287,7 @@ function isGracePeriodExpired() {
 /**
  * Update last online check timestamp
  */
-function updateLastOnlineCheck() {
+function updateLastOnlineCheck(): void {
   try {
     if (!existsSync(LICENSE_FILE)) {
       return
@@ -285,7 +304,7 @@ function updateLastOnlineCheck() {
 /**
  * Main license check with online verification
  */
-async function isLicensed() {
+export async function isLicensed(): Promise<boolean> {
   try {
     if (!existsSync(LICENSE_FILE)) {
       return false
@@ -324,7 +343,8 @@ async function isLicensed() {
         }
 
         // Still in grace period, allow offline access
-        const daysSinceCheck = (new Date() - new Date(data.lastOnlineCheck)) / (1000 * 60 * 60 * 24)
+        const lastCheck = data.lastOnlineCheck ? new Date(data.lastOnlineCheck) : new Date()
+        const daysSinceCheck = (new Date().getTime() - lastCheck.getTime()) / (1000 * 60 * 60 * 24)
         console.log(
           `Offline access allowed: ${daysSinceCheck.toFixed(1)} days since last check (grace period: 90 days)`
         )
@@ -354,12 +374,4 @@ async function isLicensed() {
     console.error('Error checking license status:', error)
     return false
   }
-}
-
-module.exports = {
-  getMachineId,
-  getLicenseInfo,
-  validateLicense,
-  saveLicense,
-  isLicensed
 }

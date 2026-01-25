@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Card } from './ui/Card'
-import { Users, Shield, Trash2, CheckCircle, XCircle, Clock, RefreshCw } from 'lucide-react'
+import { Users, Shield, Trash2, CheckCircle, RefreshCw } from 'lucide-react'
 import { toast } from 'react-toastify'
 
 interface TelegramUser {

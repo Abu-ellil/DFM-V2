@@ -107,6 +107,34 @@ declare global {
         }) => Promise<{ success: boolean; message?: string }>
         autoClean: () => Promise<{ success: boolean; count?: number; message?: string }>
       }
+      sync: {
+        getStatus: () => Promise<{
+          success: boolean
+          data: {
+            enabled: boolean
+            inProgress: boolean
+            pendingChanges: number
+            lastSync: number | null
+            lastError: string | null
+          }
+        }>
+        manualSync: () => Promise<{
+          success: boolean
+          data: {
+            success: boolean
+            pushed: number
+            pulled: number
+            failed: number
+            conflicts: number
+            duration: number
+            error?: string
+          }
+        }>
+        enable: () => Promise<{ success: boolean }>
+        disable: () => Promise<{ success: boolean }>
+        getConflicts: (limit?: number) => Promise<{ success: boolean; data: any[] }>
+        clearOldConflicts: (olderThanDays?: number) => Promise<{ success: boolean; data: { cleared: number } }>
+      }
     }
   }
 }

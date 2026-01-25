@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Card } from './ui/Card'
-import { UserCheck, UserX, RefreshCw, Clock, CheckCircle, XCircle, FileText } from 'lucide-react'
+import { UserCheck, UserX, RefreshCw, Clock, FileText } from 'lucide-react'
 import { toast } from 'react-toastify'
 
 interface RegistrationRequest {
@@ -171,7 +171,8 @@ export default function TelegramRegistrations() {
         </Card>
         <Card className="p-4 text-center">
           <div className="text-3xl font-bold text-emerald-600">{stats.approved}</div>
-          <div className="text-sm text-slate-500">مقبول</        </Card>
+          <div className="text-sm text-slate-500">مقبول</div>
+        </Card>
         <Card className="p-4 text-center">
           <div className="text-3xl font-bold text-red-600">{stats.rejected}</div>
           <div className="text-sm text-slate-500">مرفوض</div>

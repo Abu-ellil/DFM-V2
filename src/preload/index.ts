@@ -91,6 +91,14 @@ const api = {
     getAll: () => ipcRenderer.invoke('duplicates:getAll'),
     delete: (data) => ipcRenderer.invoke('duplicates:delete', data),
     autoClean: () => ipcRenderer.invoke('duplicates:autoClean')
+  },
+  sync: {
+    getStatus: () => ipcRenderer.invoke('sync:getStatus'),
+    manualSync: () => ipcRenderer.invoke('sync:manualSync'),
+    enable: () => ipcRenderer.invoke('sync:enable'),
+    disable: () => ipcRenderer.invoke('sync:disable'),
+    getConflicts: (limit?: number) => ipcRenderer.invoke('sync:getConflicts', limit),
+    clearOldConflicts: (olderThanDays?: number) => ipcRenderer.invoke('sync:clearOldConflicts', olderThanDays)
   }
 }
 

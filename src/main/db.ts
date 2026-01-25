@@ -287,6 +287,90 @@ const initSchema = (db: Database): void => {
     permStmt.run([role, permission, granted])
   })
   permStmt.free()
+
+  // Run sync-related migrations
+  runSyncMigrations(db)
+}
+
+/**
+ * Add sync-related columns and tables
+ */
+const runSyncMigrations = (db: Database): void => {
+  // Tables that need sync columns
+  const syncTables = [
+    'customers',
+    'weighbridge',
+    'crates',
+    'finance',
+    'date_types',
+    'crate_types',
+    'daily_prices',
+    'supervisors',
+    'users',
+    'telegram_users',
+    'telegram_registrations',
+    'user_roles',
+    'notification_queue',
+    'notification_preferences',
+    'role_permissions'
+  ]
+
+  // Add sync columns to each table if they don't exist
+  syncTables.forEach((table) => {
+    try {
+      db.run(`ALTER TABLE ${table} ADD COLUMN _client_id TEXT`)
+    } catch (e) {
+      // Column already exists, ignore error
+    }
+    try {
+      db.run(`ALTER TABLE ${table} ADD COLUMN _synced_at INTEGER`)
+    } catch (e) {
+      // Column already exists, ignore error
+    }
+    try {
+      db.run(`ALTER TABLE ${table} ADD COLUMN _version INTEGER DEFAULT 1`)
+    } catch (e) {
+      // Column already exists, ignore error
+    }
+  })
+
+  // Add additional columns to sync_queue table
+  try {
+    db.run(`ALTER TABLE sync_queue ADD COLUMN client_timestamp INTEGER`)
+  } catch (e) {
+    // Column already exists, ignore error
+  }
+  try {
+    db.run(`ALTER TABLE sync_queue ADD COLUMN sync_attempt_count INTEGER DEFAULT 0`)
+  } catch (e) {
+    // Column already exists, ignore error
+  }
+  try {
+    db.run(`ALTER TABLE sync_queue ADD COLUMN last_sync_error TEXT`)
+  } catch (e) {
+    // Column already exists, ignore error
+  }
+
+  // Create conflict log table
+  db.run(`CREATE TABLE IF NOT EXISTS _conflict_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    table_name TEXT NOT NULL,
+    record_id INTEGER,
+    local_data TEXT,
+    remote_data TEXT,
+    resolution TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`)
+
+  // Create sync metadata table
+  db.run(`CREATE TABLE IF NOT EXISTS _sync_metadata (
+    key TEXT PRIMARY KEY,
+    value TEXT
+  )`)
+
+  // Create indexes for sync tables
+  db.run('CREATE INDEX IF NOT EXISTS idx_sync_queue_synced ON sync_queue(synced)')
+  db.run('CREATE INDEX IF NOT EXISTS idx_conflict_log_table ON _conflict_log(table_name, record_id)')
 }
 
 export const initializeDatabase = async (force: boolean = false): Promise<Database> => {

@@ -7,6 +7,7 @@ import * as XLSX from 'xlsx'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { initializeDatabase, getDb, saveDatabase, getDbPath } from './db'
+import { enqueueChange } from './sync/queue'
 import bcrypt from 'bcryptjs'
 import {
   generateReportData,
@@ -23,10 +24,8 @@ import {
   getBotStats
 } from './telegram'
 
-// Import license manager from root
-/* eslint-disable @typescript-eslint/no-require-imports */
-// @ts-ignore (license.js is in root)
-import licenseManager = require('../../license.js')
+// Import license manager
+import * as licenseManager from './license'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -133,7 +132,19 @@ ipcMain.handle('customers:create', async (_event, customer) => {
     stmt.bind([customer.name, customer.type, customer.phone])
     stmt.run()
     stmt.free()
+
+    const lastId = db.exec('SELECT last_insert_rowid() as id')[0].values[0][0] as number
     await saveDatabase()
+
+    // Enqueue for sync
+    await enqueueChange({
+      operation: 'INSERT',
+      table: 'customers',
+      record_id: lastId,
+      data: { ...customer, id: lastId, _client_id: null, _synced_at: null, _version: 1 },
+      client_timestamp: Date.now()
+    }).catch((err) => console.error('Failed to enqueue change:', err))
+
     return { success: true }
   } catch (error) {
     console.error('Create customer error:', error)
@@ -149,6 +160,16 @@ ipcMain.handle('customers:update', async (_event, id, customer) => {
     stmt.run()
     stmt.free()
     await saveDatabase()
+
+    // Enqueue for sync
+    await enqueueChange({
+      operation: 'UPDATE',
+      table: 'customers',
+      record_id: id,
+      data: customer,
+      client_timestamp: Date.now()
+    }).catch((err) => console.error('Failed to enqueue change:', err))
+
     return { success: true }
   } catch (error) {
     console.error('Update customer error:', error)
@@ -164,6 +185,16 @@ ipcMain.handle('customers:delete', async (_event, id) => {
     stmt.run()
     stmt.free()
     await saveDatabase()
+
+    // Enqueue for sync
+    await enqueueChange({
+      operation: 'DELETE',
+      table: 'customers',
+      record_id: id,
+      data: { id },
+      client_timestamp: Date.now()
+    }).catch((err) => console.error('Failed to enqueue change:', err))
+
     return { success: true }
   } catch (error) {
     console.error('Delete customer error:', error)
@@ -350,7 +381,19 @@ ipcMain.handle('weighbridge:create', async (_event, data) => {
     ])
     stmt.run()
     stmt.free()
+
+    const lastId = db.exec('SELECT last_insert_rowid() as id')[0].values[0][0] as number
     await saveDatabase()
+
+    // Enqueue for sync
+    await enqueueChange({
+      operation: 'INSERT',
+      table: 'weighbridge',
+      record_id: lastId,
+      data: { ...data, id: lastId },
+      client_timestamp: Date.now()
+    }).catch((err) => console.error('Failed to enqueue change:', err))
+
     return { success: true }
   } catch (error) {
     console.error('Create weighbridge error:', error)
@@ -427,7 +470,19 @@ ipcMain.handle('crates:create', async (_event, data) => {
     ])
     stmt.run()
     stmt.free()
+
+    const lastId = db.exec('SELECT last_insert_rowid() as id')[0].values[0][0] as number
     await saveDatabase()
+
+    // Enqueue for sync
+    await enqueueChange({
+      operation: 'INSERT',
+      table: 'crates',
+      record_id: lastId,
+      data: { ...data, id: lastId },
+      client_timestamp: Date.now()
+    }).catch((err) => console.error('Failed to enqueue change:', err))
+
     return { success: true }
   } catch (error) {
     console.error('Create crate transaction error:', error)
@@ -439,7 +494,7 @@ ipcMain.handle('crates:update', async (_event, id, data) => {
   try {
     const db = getDb()
     const stmt = db.prepare(`
-      UPDATE crates 
+      UPDATE crates
       SET date = ?, customer_id = ?, crate_type_id = ?, crates_out = ?, crates_returned = ?, handler = ?, notes = ?
       WHERE id = ?
     `)
@@ -456,6 +511,16 @@ ipcMain.handle('crates:update', async (_event, id, data) => {
     stmt.run()
     stmt.free()
     await saveDatabase()
+
+    // Enqueue for sync
+    await enqueueChange({
+      operation: 'UPDATE',
+      table: 'crates',
+      record_id: id,
+      data: data,
+      client_timestamp: Date.now()
+    }).catch((err) => console.error('Failed to enqueue change:', err))
+
     return { success: true }
   } catch (error) {
     console.error('Update crate transaction error:', error)
@@ -471,6 +536,16 @@ ipcMain.handle('crates:delete', async (_event, id) => {
     stmt.run()
     stmt.free()
     await saveDatabase()
+
+    // Enqueue for sync
+    await enqueueChange({
+      operation: 'DELETE',
+      table: 'crates',
+      record_id: id,
+      data: { id },
+      client_timestamp: Date.now()
+    }).catch((err) => console.error('Failed to enqueue change:', err))
+
     return { success: true }
   } catch (error) {
     console.error('Delete crate transaction error:', error)
@@ -544,7 +619,19 @@ ipcMain.handle('finance:create', async (_event, data) => {
     ])
     stmt.run()
     stmt.free()
+
+    const lastId = db.exec('SELECT last_insert_rowid() as id')[0].values[0][0] as number
     await saveDatabase()
+
+    // Enqueue for sync
+    await enqueueChange({
+      operation: 'INSERT',
+      table: 'finance',
+      record_id: lastId,
+      data: { ...data, id: lastId },
+      client_timestamp: Date.now()
+    }).catch((err) => console.error('Failed to enqueue change:', err))
+
     return { success: true }
   } catch (error) {
     console.error('Create finance transaction error:', error)
@@ -556,7 +643,7 @@ ipcMain.handle('finance:update', async (_event, id, data) => {
   try {
     const db = getDb()
     const stmt = db.prepare(`
-      UPDATE finance 
+      UPDATE finance
       SET date = ?, customer_id = ?, transaction_type = ?, amount_paid = ?, amount_received = ?, notes = ?
       WHERE id = ?
     `)
@@ -572,6 +659,16 @@ ipcMain.handle('finance:update', async (_event, id, data) => {
     stmt.run()
     stmt.free()
     await saveDatabase()
+
+    // Enqueue for sync
+    await enqueueChange({
+      operation: 'UPDATE',
+      table: 'finance',
+      record_id: id,
+      data: data,
+      client_timestamp: Date.now()
+    }).catch((err) => console.error('Failed to enqueue change:', err))
+
     return { success: true }
   } catch (error) {
     console.error('Update finance transaction error:', error)
@@ -587,6 +684,16 @@ ipcMain.handle('finance:delete', async (_event, id) => {
     stmt.run()
     stmt.free()
     await saveDatabase()
+
+    // Enqueue for sync
+    await enqueueChange({
+      operation: 'DELETE',
+      table: 'finance',
+      record_id: id,
+      data: { id },
+      client_timestamp: Date.now()
+    }).catch((err) => console.error('Failed to enqueue change:', err))
+
     return { success: true }
   } catch (error) {
     console.error('Delete finance transaction error:', error)
@@ -1346,6 +1453,73 @@ ipcMain.handle(
     }
   }
 )
+
+// Sync IPC Handlers
+ipcMain.handle('sync:getStatus', async () => {
+  try {
+    const { getSyncStatus } = require('./sync')
+    const status = await getSyncStatus()
+    return { success: true, data: status }
+  } catch (error: any) {
+    console.error('Get sync status error:', error)
+    return { success: false, message: error.message || 'Failed to get sync status' }
+  }
+})
+
+ipcMain.handle('sync:manualSync', async () => {
+  try {
+    const { manualSync } = require('./sync')
+    const result = await manualSync()
+    return { success: true, data: result }
+  } catch (error: any) {
+    console.error('Manual sync error:', error)
+    return { success: false, message: error.message || 'Sync failed' }
+  }
+})
+
+ipcMain.handle('sync:enable', async () => {
+  try {
+    const { enableSync } = require('./sync')
+    enableSync()
+    return { success: true }
+  } catch (error: any) {
+    console.error('Enable sync error:', error)
+    return { success: false, message: error.message || 'Failed to enable sync' }
+  }
+})
+
+ipcMain.handle('sync:disable', async () => {
+  try {
+    const { disableSync } = require('./sync')
+    disableSync()
+    return { success: true }
+  } catch (error: any) {
+    console.error('Disable sync error:', error)
+    return { success: false, message: error.message || 'Failed to disable sync' }
+  }
+})
+
+ipcMain.handle('sync:getConflicts', async (_event, limit) => {
+  try {
+    const { getRecentConflicts } = require('./sync/conflict')
+    const conflicts = await getRecentConflicts(limit || 50)
+    return { success: true, data: conflicts }
+  } catch (error: any) {
+    console.error('Get conflicts error:', error)
+    return { success: false, message: error.message || 'Failed to get conflicts' }
+  }
+})
+
+ipcMain.handle('sync:clearOldConflicts', async (_event, olderThanDays) => {
+  try {
+    const { clearOldConflicts } = require('./sync/conflict')
+    const cleared = await clearOldConflicts(olderThanDays || 90)
+    return { success: true, data: { cleared } }
+  } catch (error: any) {
+    console.error('Clear conflicts error:', error)
+    return { success: false, message: error.message || 'Failed to clear conflicts' }
+  }
+})
 
 // This method will be called when Electron has finished
 app.whenReady().then(() => {

@@ -23,7 +23,16 @@
       "Bash(npm run lint)",
       "Bash(eslint:*)",
       "Bash(pnpm lint:*)",
-      "Bash(npm run lint:*)"
+      "Bash(npm run lint:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run dev:*)",
+      "Bash(node:*)",
+      "Bash(taskkill:*)",
+      "Bash(git push:*)",
+      "WebSearch",
+      "Bash(sqlite3:*)",
+      "Bash(npx tsc:*)",
+      "Bash(vercel:*)"
     ]
   }
 }

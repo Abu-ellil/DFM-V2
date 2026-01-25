@@ -14,6 +14,7 @@ import Reports from './components/Reports'
 import Settings from './components/Settings'
 import Duplicates from './components/Duplicates'
 import CustomerDetails from './components/CustomerDetails'
+import { SyncStatus } from './components/SyncStatus'
 import {
   LayoutDashboard,
   Users,
@@ -238,6 +239,7 @@ function App() {
           </div>
 
           <div className="flex items-center gap-3">
+            <SyncStatus />
             <button className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors relative">
               <Bell size={20} />
               <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>

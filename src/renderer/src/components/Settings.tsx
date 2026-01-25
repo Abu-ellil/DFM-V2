@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSettingsStore } from '../store/useSettingsStore'
 import { Card } from './ui/Card'
+import { SyncSettings } from './SyncSettings'
 import {
   Settings as SettingsIcon,
   Save,
@@ -907,6 +908,9 @@ export default function Settings() {
             </div>
           </div>
         </Card>
+
+        {/* Cloud Sync Settings */}
+        <SyncSettings />
 
         {/* License Management */}
         <Card className="space-y-4">
