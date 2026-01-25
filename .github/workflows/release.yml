@@ -59,14 +59,16 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx electron-builder --linux --publish always
 
+      - name: List dist directory (Windows)
+        if: matrix.os == 'windows-latest'
+        run: ls -R dist
+
       - name: Upload artifacts (Windows)
         if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v4
         with:
           name: windows-build
-          path: |
-            dist/*.exe
-            dist/*.zip
+          path: dist/*
 
       - name: Upload artifacts (macOS)
         if: matrix.os == 'macos-latest'
