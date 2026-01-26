@@ -140,10 +140,12 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
   )
 
   const totalNetWeight = customerWeighbridge.reduce((acc, curr) => acc + curr.net_weight, 0)
-  const totalFinanceBalance = customerFinance.reduce(
-    (acc, curr) => acc + (curr.amount_received - curr.amount_paid),
-    0
-  )
+
+  // حساب الإجماليات بشكل واضح
+  const totalSupplied = customerFinance.reduce((acc, curr) => acc + curr.amount_paid, 0) // توريدات البلح - له على المصنع
+  const totalReceived = customerFinance.reduce((acc, curr) => acc + curr.amount_received, 0) // السلف والمصروفات - عليه للمصنع
+  const totalFinanceBalance = totalSupplied - totalReceived // الرصيد النهائي
+
   const cratesBalance = customerCrates.reduce(
     (acc, curr) => acc + (curr.crates_out - curr.crates_returned),
     0
@@ -171,14 +173,14 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
     { header: 'التاريخ', accessor: (t: any) => new Date(t.date).toLocaleDateString('ar-EG') },
     { header: 'البيان', accessor: 'transaction_type' as const },
     {
-      header: 'مدين (له)',
-      accessor: (t: any) => (t.amount_received > 0 ? formatCurrency(t.amount_received) : '-'),
-      className: 'text-emerald-600'
+      header: 'له (توريدات البلح)',
+      accessor: (t: any) => (t.amount_paid > 0 ? formatCurrency(t.amount_paid) : '-'),
+      className: 'text-emerald-600 font-bold'
     },
     {
-      header: 'دائن (عليه)',
-      accessor: (t: any) => (t.amount_paid > 0 ? formatCurrency(t.amount_paid) : '-'),
-      className: 'text-red-600'
+      header: 'عليه (سلف ومصروفات)',
+      accessor: (t: any) => (t.amount_received > 0 ? formatCurrency(t.amount_received) : '-'),
+      className: 'text-red-600 font-bold'
     },
     {
       header: 'إجراء',
@@ -349,16 +351,68 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
           </div>
         </Card>
 
-        <Card className="bg-emerald-600 text-white">
+        <Card className="bg-gradient-to-br from-slate-800 to-slate-900 text-white">
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-emerald-100 text-sm font-bold">إجمالي الرصيد المالي</span>
-              <Wallet size={20} />
+            <div className="flex justify-between items-center border-b border-slate-600 pb-3">
+              <h3 className="text-lg font-bold flex items-center gap-2">
+                <Wallet size={22} className="text-emerald-400" />
+                ملخص الحساب المالي
+              </h3>
             </div>
-            <p className="text-3xl font-black">{formatCurrency(totalFinanceBalance)}</p>
-            <div className="pt-2 border-t border-emerald-500 flex justify-between text-xs">
-              <span>رصيد الصناديق: {cratesBalance}</span>
-              <span>إجمالي الوزن: {formatNumber(totalNetWeight)} كجم</span>
+
+            {/* التوريدات - له على المصنع */}
+            <div className="bg-emerald-500/20 rounded-xl p-4 border-2 border-emerald-400/30">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-emerald-300 text-sm font-bold mb-1">إجمالي توريدات البلح</p>
+                  <p className="text-xs text-slate-300">(له على المصنع)</p>
+                </div>
+                <p className="text-3xl font-black text-emerald-400">
+                  {formatCurrency(totalSupplied)}
+                </p>
+              </div>
+            </div>
+
+            {/* السلف والمصروفات - عليه للمصنع */}
+            <div className="bg-red-500/20 rounded-xl p-4 border-2 border-red-400/30">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-red-300 text-sm font-bold mb-1">إجمالي السلف والمصروفات</p>
+                  <p className="text-xs text-slate-300">(عليه للمصنع)</p>
+                </div>
+                <p className="text-3xl font-black text-red-400">{formatCurrency(totalReceived)}</p>
+              </div>
+            </div>
+
+            {/* الرصيد النهائي */}
+            <div
+              className={`rounded-xl p-4 border-2 ${totalFinanceBalance >= 0 ? 'bg-emerald-600 border-emerald-400' : 'bg-red-600 border-red-400'}`}
+            >
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-sm font-bold mb-1 opacity-90">الرصيد المتبقي</p>
+                  <p className="text-xs opacity-75">
+                    {totalFinanceBalance >= 0 ? 'المصنع عليه للزبون' : 'الزبون عليه للمصنع'}
+                  </p>
+                </div>
+                <p
+                  className={`text-4xl font-black ${totalFinanceBalance >= 0 ? 'text-white' : 'text-white'}`}
+                >
+                  {formatCurrency(Math.abs(totalFinanceBalance))}
+                </p>
+              </div>
+            </div>
+
+            {/* معلومات إضافية */}
+            <div className="pt-3 border-t border-slate-600 grid grid-cols-2 gap-3 text-xs">
+              <div className="bg-slate-700/50 rounded-lg p-2 text-center">
+                <p className="text-slate-400">رصيد الصناديق</p>
+                <p className="text-lg font-bold">{cratesBalance} صندوق</p>
+              </div>
+              <div className="bg-slate-700/50 rounded-lg p-2 text-center">
+                <p className="text-slate-400">إجمالي الوزن</p>
+                <p className="text-lg font-bold">{formatNumber(totalNetWeight)} كجم</p>
+              </div>
             </div>
           </div>
         </Card>
@@ -554,16 +608,22 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
                     {printingTransaction.data.transaction_type}
                   </span>
                 </div>
-                <div className="flex justify-between items-center border-b-2 border-emerald-100 pb-3 px-2 bg-emerald-50/30">
-                  <span className="text-emerald-700 font-bold">المبلغ:</span>
-                  <span className="font-black text-emerald-800 text-4xl">
-                    {formatCurrency(
-                      printingTransaction.data.amount_received > 0
-                        ? printingTransaction.data.amount_received
-                        : printingTransaction.data.amount_paid
-                    )}
-                  </span>
-                </div>
+                {printingTransaction.data.amount_paid > 0 && (
+                  <div className="flex justify-between items-center border-b-2 border-emerald-100 pb-3 px-2 bg-emerald-50/30">
+                    <span className="text-emerald-700 font-bold">له (توريد):</span>
+                    <span className="font-black text-emerald-800 text-4xl">
+                      {formatCurrency(printingTransaction.data.amount_paid)}
+                    </span>
+                  </div>
+                )}
+                {printingTransaction.data.amount_received > 0 && (
+                  <div className="flex justify-between items-center border-b-2 border-red-100 pb-3 px-2 bg-red-50/30">
+                    <span className="text-red-700 font-bold">عليه (سلفة):</span>
+                    <span className="font-black text-red-800 text-4xl">
+                      {formatCurrency(printingTransaction.data.amount_received)}
+                    </span>
+                  </div>
+                )}
                 <div className="col-span-2 mt-6 p-8 border-2 border-dashed border-slate-300 rounded-2xl bg-slate-50">
                   <span className="text-slate-500 font-bold block mb-3 text-xl">
                     ملاحظات / بيان:
