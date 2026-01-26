@@ -139,6 +139,27 @@ declare global {
         getConflicts: (limit?: number) => Promise<{ success: boolean; data: any[] }>
         clearOldConflicts: (olderThanDays?: number) => Promise<{ success: boolean; data: { cleared: number } }>
       }
+      cloudAccount: {
+        register: (data: {
+          phone: string
+          password: string
+          factoryName?: string
+        }) => Promise<{ success: boolean; message?: string }>
+        login: (data: {
+          phone: string
+          password: string
+        }) => Promise<{ success: boolean; message?: string; user?: any }>
+        restore: (data: {
+          phone: string
+          password: string
+        }) => Promise<{ success: boolean; message?: string }>
+        getStatus: () => Promise<{
+          success: boolean
+          isRegistered: boolean
+          phone?: string
+          factoryName?: string
+        }>
+      }
       print: () => Promise<{ success: boolean; message?: string }>
       on?: (channel: string, callback: (...args: any[]) => void) => void
       removeListener?: (channel: string, callback: (...args: any[]) => void) => void

@@ -23,9 +23,13 @@ import {
   testBotConnection,
   getBotStats
 } from './telegram'
+import * as sync from './sync'
+import * as syncConflict from './sync/conflict'
+import * as webAuth from './web-auth'
 
 // Import license manager
 import * as licenseManager from './license'
+import { getRegistrationHandler } from './telegram/handlers/registration'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -933,8 +937,7 @@ ipcMain.handle('customerAccounts:getRecentTransactions', async (_event, customer
 // Security IPC
 ipcMain.handle('auth:setWebPassword', async (_event, { phone, password }) => {
   try {
-    const { updateWebPassword } = require('./web-auth')
-    const result = await updateWebPassword({ phone, newPassword: password })
+    const result = await webAuth.updateWebPassword({ phone, newPassword: password })
 
     if (result.success) {
       return { success: true, message: 'تم تحديث كلمة مرور الويب بنجاح' }
@@ -949,13 +952,76 @@ ipcMain.handle('auth:setWebPassword', async (_event, { phone, password }) => {
 
 ipcMain.handle('auth:getWebUserStatus', async () => {
   try {
-    const { isWebUserRegistered, getWebUser } = require('./web-auth')
-    const registered = isWebUserRegistered()
-    const user = getWebUser()
+    const registered = webAuth.isWebUserRegistered()
+    const user = webAuth.getWebUser()
     return { success: true, registered, user }
   } catch (error: any) {
     console.error('Get web user status error:', error)
     return { success: false, registered: false }
+  }
+})
+
+// Cloud Account IPC Handlers
+ipcMain.handle('cloudAccount:register', async (_event, { phone, password, factoryName }) => {
+  try {
+    const result = await webAuth.registerWebUser({
+      phone,
+      password,
+      factory_name: factoryName
+    })
+
+    if (result.success) {
+      // Enable sync after successful registration
+      sync.enableSync()
+      return { success: true, message: 'تم إنشاء الحساب وتفعيل المزامنة بنجاح' }
+    } else {
+      return { success: false, message: result.error || 'فشل إنشاء الحساب' }
+    }
+  } catch (error: any) {
+    console.error('Cloud account register error:', error)
+    return { success: false, message: error.message || 'حدث خطأ أثناء إنشاء الحساب' }
+  }
+})
+
+ipcMain.handle('cloudAccount:login', async (_event, { phone, password }) => {
+  try {
+    const result = await webAuth.loginWebUser({ phone, password })
+
+    if (result.success) {
+      // Enable sync after successful login
+      sync.enableSync()
+      return { success: true, message: 'تم تسجيل الدخول بنجاح', user: result.user }
+    } else {
+      return { success: false, message: result.error || 'فشل تسجيل الدخول' }
+    }
+  } catch (error: any) {
+    console.error('Cloud account login error:', error)
+    return { success: false, message: error.message || 'حدث خطأ أثناء تسجيل الدخول' }
+  }
+})
+
+ipcMain.handle('cloudAccount:restore', async (_event, { phone, password }) => {
+  try {
+    const result = await webAuth.restoreUserData({ phone, password })
+
+    if (result.success) {
+      return { success: true, message: result.message || 'تم استعادة البيانات بنجاح' }
+    } else {
+      return { success: false, message: result.error || 'فشل استعادة البيانات' }
+    }
+  } catch (error: any) {
+    console.error('Cloud account restore error:', error)
+    return { success: false, message: error.message || 'حدث خطأ أثناء استعادة البيانات' }
+  }
+})
+
+ipcMain.handle('cloudAccount:getStatus', async () => {
+  try {
+    const status = webAuth.getCloudAccountStatus()
+    return { success: true, ...status }
+  } catch (error: any) {
+    console.error('Get cloud account status error:', error)
+    return { success: false, isRegistered: false }
   }
 })
 
@@ -1721,8 +1787,7 @@ ipcMain.handle(
 // Sync IPC Handlers
 ipcMain.handle('sync:getStatus', async () => {
   try {
-    const { getSyncStatus } = require('./sync')
-    const status = await getSyncStatus()
+    const status = await sync.getSyncStatus()
     return { success: true, data: status }
   } catch (error: any) {
     console.error('Get sync status error:', error)
@@ -1732,8 +1797,7 @@ ipcMain.handle('sync:getStatus', async () => {
 
 ipcMain.handle('sync:manualSync', async () => {
   try {
-    const { manualSync } = require('./sync')
-    const result = await manualSync()
+    const result = await sync.manualSync()
     return { success: true, data: result }
   } catch (error: any) {
     console.error('Manual sync error:', error)
@@ -1743,8 +1807,7 @@ ipcMain.handle('sync:manualSync', async () => {
 
 ipcMain.handle('sync:enable', async () => {
   try {
-    const { enableSync } = require('./sync')
-    enableSync()
+    await sync.enableSync()
     return { success: true }
   } catch (error: any) {
     console.error('Enable sync error:', error)
@@ -1754,8 +1817,7 @@ ipcMain.handle('sync:enable', async () => {
 
 ipcMain.handle('sync:disable', async () => {
   try {
-    const { disableSync } = require('./sync')
-    disableSync()
+    sync.disableSync()
     return { success: true }
   } catch (error: any) {
     console.error('Disable sync error:', error)
@@ -1765,8 +1827,7 @@ ipcMain.handle('sync:disable', async () => {
 
 ipcMain.handle('sync:getConflicts', async (_event, limit) => {
   try {
-    const { getRecentConflicts } = require('./sync/conflict')
-    const conflicts = await getRecentConflicts(limit || 50)
+    const conflicts = await syncConflict.getRecentConflicts(limit || 50)
     return { success: true, data: conflicts }
   } catch (error: any) {
     console.error('Get conflicts error:', error)

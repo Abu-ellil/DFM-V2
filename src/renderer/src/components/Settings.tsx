@@ -3,6 +3,7 @@ import { useSettingsStore } from '../store/useSettingsStore'
 import { useCustomerAccountStore } from '../store/useCustomerAccountStore'
 import { Card } from './ui/Card'
 import { SyncSettings } from './SyncSettings'
+import { CloudAccount } from './CloudAccount'
 import {
   Settings as SettingsIcon,
   Save,
@@ -755,18 +756,16 @@ export default function Settings() {
           <div className="space-y-4">
             {/* Bot Status */}
             <div
-              className={`p-4 rounded-lg border-2 ${
-                botStatus?.isRunning
+              className={`p-4 rounded-lg border-2 ${botStatus?.isRunning
                   ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800'
                   : 'bg-slate-50 border-slate-200 dark:bg-slate-800 dark:border-slate-700'
-              }`}
+                }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div
-                    className={`w-3 h-3 rounded-full ${
-                      botStatus?.isRunning ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
-                    }`}
+                    className={`w-3 h-3 rounded-full ${botStatus?.isRunning ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
+                      }`}
                   />
                   <span className="font-bold text-sm">
                     {botStatus?.isRunning ? 'البوت يعمل' : 'البوت متوقف'}
@@ -774,11 +773,10 @@ export default function Settings() {
                 </div>
                 <button
                   onClick={() => handleEnableBot(!botStatus?.isRunning)}
-                  className={`text-xs px-4 py-2 rounded-full font-bold transition-colors ${
-                    botStatus?.isRunning
+                  className={`text-xs px-4 py-2 rounded-full font-bold transition-colors ${botStatus?.isRunning
                       ? 'bg-red-100 text-red-600 hover:bg-red-200'
                       : 'bg-emerald-600 text-white hover:bg-emerald-700'
-                  }`}
+                    }`}
                 >
                   {botStatus?.isRunning ? 'إيقاف البوت' : 'تشغيل البوت'}
                 </button>

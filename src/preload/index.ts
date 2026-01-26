@@ -106,6 +106,15 @@ const api = {
     clearOldConflicts: (olderThanDays?: number) =>
       ipcRenderer.invoke('sync:clearOldConflicts', olderThanDays)
   },
+  cloudAccount: {
+    register: (data: { phone: string; password: string; factoryName?: string }) =>
+      ipcRenderer.invoke('cloudAccount:register', data),
+    login: (data: { phone: string; password: string }) =>
+      ipcRenderer.invoke('cloudAccount:login', data),
+    restore: (data: { phone: string; password: string }) =>
+      ipcRenderer.invoke('cloudAccount:restore', data),
+    getStatus: () => ipcRenderer.invoke('cloudAccount:getStatus')
+  },
   print: () => ipcRenderer.invoke('app:print'),
   on: (channel, callback) => {
     ipcRenderer.on(channel, (_event, ...args) => callback(...args))

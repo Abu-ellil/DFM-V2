@@ -163,14 +163,44 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
 
   const totalNetWeight = customerWeighbridge.reduce((acc, curr) => acc + curr.net_weight, 0)
 
-  // حساب الإجماليات بشكل واضح - Using backend calculated values
-  const totalWeighbridgeDebt = accountSummary?.total_weighbridge_debt || 0 // دين الميزان - أصل قيمة التمور
-  const totalCashPayments = accountSummary?.total_paid || 0 // توريدات البلح نقداً
-  const totalAdvances = accountSummary?.total_received || 0 // السلف والمصروفات
-  const totalSupplied = totalCashPayments + totalWeighbridgeDebt // إجمالي ما للمورد (تمور + نقد)
-  const totalFinanceBalance = accountSummary?.net_balance || 0 // الرصيد النهائي
+  // حساب الإجماليات محلياً لضمان الدقة وتوافقها مع البيانات المعروضة
+  const totalWeighbridgeDebt = useMemo(
+    () => customerWeighbridge.reduce((acc, curr) => acc + (Number(curr.total) || 0), 0),
+    [customerWeighbridge]
+  ) // دين الميزان - أصل قيمة التمور
 
-  const cratesBalance = accountSummary?.crate_balance || 0
+  const totalCashPayments = useMemo(
+    () => customerFinance.reduce((acc, curr) => acc + (Number(curr.amount_paid) || 0), 0),
+    [customerFinance]
+  ) // توريدات البلح نقداً
+
+  const totalAdvances = useMemo(
+    () => customerFinance.reduce((acc, curr) => acc + (Number(curr.amount_received) || 0), 0),
+    [customerFinance]
+  ) // السلف والمصروفات
+
+  const totalSupplied = totalCashPayments + totalWeighbridgeDebt // إجمالي ما للمورد (تمور + نقد)
+  const totalFinanceBalance = totalSupplied - totalAdvances // الرصيد النهائي
+
+  const cratesBalance = useMemo(
+    () =>
+      customerCrates.reduce(
+        (acc, curr) =>
+          acc + (Number(curr.crates_out) || 0) - (Number(curr.crates_returned) || 0),
+        0
+      ),
+    [customerCrates]
+  )
+
+  const weighbridgeCount = customerWeighbridge.length
+  const totalCratesOut = useMemo(
+    () => customerCrates.reduce((acc, curr) => acc + (Number(curr.crates_out) || 0), 0),
+    [customerCrates]
+  )
+  const totalCratesReturned = useMemo(
+    () => customerCrates.reduce((acc, curr) => acc + (Number(curr.crates_returned) || 0), 0),
+    [customerCrates]
+  )
 
   const weighbridgeColumns = [
     { header: 'التاريخ', accessor: (t: any) => new Date(t.date).toLocaleDateString('ar-EG') },
@@ -194,12 +224,12 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
     { header: 'التاريخ', accessor: (t: any) => new Date(t.date).toLocaleDateString('ar-EG') },
     { header: 'البيان', accessor: 'transaction_type' as const },
     {
-      header: 'له (توريدات البلح)',
+      header: 'له (إيراد من العميل)',
       accessor: (t: any) => (t.amount_paid > 0 ? formatCurrency(t.amount_paid) : '-'),
       className: 'text-emerald-600 font-bold'
     },
     {
-      header: 'عليه (سلف ومصروفات)',
+      header: 'عليه (مدفوع للعميل)',
       accessor: (t: any) => (t.amount_received > 0 ? formatCurrency(t.amount_received) : '-'),
       className: 'text-red-600 font-bold'
     },
@@ -329,7 +359,7 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
 
       {/* Customer Info Card */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 print:hidden">
-        <Card className="md:col-span-2">
+        <Card className="md:col-span-1">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500">
@@ -372,7 +402,7 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
           </div>
         </Card>
 
-        <Card className="bg-gradient-to-br from-slate-800 to-slate-900 text-white">
+        <Card className="md:col-span-2 bg-gradient-to-br from-slate-800 to-slate-900 text-white">
           <div className="space-y-4">
             <div className="flex justify-between items-center border-b border-slate-600 pb-3">
               <h3 className="text-lg font-bold flex items-center gap-2">
@@ -394,12 +424,12 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
               </div>
             </div>
 
-            {/* توريدات البلح نقداً */}
+            {/* إيرادات من العميل */}
             <div className="bg-emerald-500/20 rounded-xl p-4 border-2 border-emerald-400/30">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                 <div>
-                  <p className="text-emerald-300 text-sm font-bold mb-1">توريدات البلح نقداً</p>
-                  <p className="text-xs text-slate-300">(المصنع عليه للعميل)</p>
+                  <p className="text-emerald-300 text-sm font-bold mb-1">إيرادات من العميل</p>
+                  <p className="text-xs text-slate-300">(العميل دفع للمصنع)</p>
                 </div>
                 <p className="text-2xl md:text-3xl font-black text-emerald-400 break-all">
                   {formatCurrency(totalCashPayments)}
@@ -412,7 +442,7 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                 <div>
                   <p className="text-cyan-300 text-sm font-bold mb-1">إجمالي ما للعميل</p>
-                  <p className="text-xs text-slate-300">(تمور + توريدات نقدية)</p>
+                  <p className="text-xs text-slate-300">(تمور + إيرادات)</p>
                 </div>
                 <p className="text-2xl md:text-3xl font-black text-cyan-400 break-all">
                   {formatCurrency(totalSupplied)}
@@ -420,12 +450,12 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
               </div>
             </div>
 
-            {/* السلف والمصروفات */}
+            {/* مدفوعات للعميل */}
             <div className="bg-red-500/20 rounded-xl p-4 border-2 border-red-400/30">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                 <div>
-                  <p className="text-red-300 text-sm font-bold mb-1">السلف والمصروفات</p>
-                  <p className="text-xs text-slate-300">(العميل عليه للمصنع)</p>
+                  <p className="text-red-300 text-sm font-bold mb-1">مدفوعات للعميل</p>
+                  <p className="text-xs text-slate-300">(المصنع دفع للعميل)</p>
                 </div>
                 <p className="text-2xl md:text-3xl font-black text-red-400 break-all">
                   {formatCurrency(totalAdvances)}
@@ -462,12 +492,12 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
               </div>
               <div className="bg-slate-700/50 rounded-lg p-2 text-center">
                 <p className="text-slate-400">عدد عمليات الميزان</p>
-                <p className="text-lg font-bold">{accountSummary?.weighbridge_transaction_count || 0}</p>
+                <p className="text-lg font-bold">{weighbridgeCount}</p>
               </div>
               <div className="bg-slate-700/50 rounded-lg p-2 text-center">
                 <p className="text-slate-400">إجمالي الصناديق</p>
                 <p className="text-lg font-bold">
-                  {accountSummary?.total_crates_out || 0} خارج / {accountSummary?.total_crates_returned || 0} عائد
+                  {totalCratesOut} خارج / {totalCratesReturned} عائد
                 </p>
               </div>
             </div>
@@ -667,7 +697,7 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
                 </div>
                 {printingTransaction.data.amount_paid > 0 && (
                   <div className="flex justify-between items-center border-b-2 border-emerald-100 pb-3 px-2 bg-emerald-50/30">
-                    <span className="text-emerald-700 font-bold">له (توريد):</span>
+                    <span className="text-emerald-700 font-bold">له (إيراد من العميل):</span>
                     <span className="font-black text-emerald-800 text-4xl">
                       {formatCurrency(printingTransaction.data.amount_paid)}
                     </span>
@@ -675,7 +705,7 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
                 )}
                 {printingTransaction.data.amount_received > 0 && (
                   <div className="flex justify-between items-center border-b-2 border-red-100 pb-3 px-2 bg-red-50/30">
-                    <span className="text-red-700 font-bold">عليه (سلفة):</span>
+                    <span className="text-red-700 font-bold">عليه (مدفوع للعميل):</span>
                     <span className="font-black text-red-800 text-4xl">
                       {formatCurrency(printingTransaction.data.amount_received)}
                     </span>
@@ -796,8 +826,8 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
                       setNewFinance({ ...newFinance, transaction_type: e.target.value })
                     }
                   >
-                    <option value="مقبوض">مقبوض (إيراد)</option>
-                    <option value="مدفوع">مدفوع (مصروف)</option>
+                    <option value="مقبوض">مقبوض من العميل</option>
+                    <option value="مدفوع">مدفوع للعميل</option>
                   </select>
                 </div>
               </div>

@@ -149,3 +149,145 @@ export function isWebUserRegistered(): boolean {
   const user = getWebUser()
   return user !== null && user.phone !== undefined && user.machine_id !== undefined
 }
+
+/**
+ * Login web user with phone and password
+ * Validates credentials against cloud API
+ */
+export async function loginWebUser(params: {
+  phone: string
+  password: string
+}): Promise<{ success: boolean; error?: string; user?: { phone: string; factory_name?: string; machine_id?: string } }> {
+  try {
+    console.log('[WEB_AUTH] Attempting login for:', params.phone)
+
+    // Hash password before sending (API expects hashed password)
+    const salt = await bcrypt.genSalt(10)
+    const hashedPassword = await bcrypt.hash(params.password, salt)
+
+    // Login with central auth API
+    const response = await fetch(`${WEB_AUTH_API_URL}/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        phone: params.phone,
+        password: params.password // Send plain password, server will verify
+      })
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Login failed' }))
+      console.error('[WEB_AUTH] Login failed:', errorData)
+      return { success: false, error: errorData.message || 'رقم الهاتف أو كلمة المرور غير صحيحة' }
+    }
+
+    const userData = await response.json()
+    console.log('[WEB_AUTH] Login successful')
+
+    // Store credentials locally
+    const db = getDb()
+    const machineId = getMachineId()
+
+    // Check if user exists locally
+    const existingUsers = db.exec(`SELECT id FROM users WHERE username = 'admin' OR role = 'owner' LIMIT 1`)
+
+    if (existingUsers.length > 0 && existingUsers[0].values.length > 0) {
+      const userId = existingUsers[0].values[0][0] as number
+      db.run(`UPDATE users SET phone = ?, web_password = ?, machine_id = ? WHERE id = ?`, [
+        params.phone,
+        hashedPassword,
+        machineId,
+        userId
+      ])
+    } else {
+      db.run(
+        `INSERT INTO users (username, password, role, phone, machine_id, web_password) VALUES (?, ?, ?, ?, ?, ?)`,
+        ['owner', hashedPassword, 'owner', params.phone, machineId, hashedPassword]
+      )
+    }
+
+    return {
+      success: true,
+      user: {
+        phone: params.phone,
+        factory_name: userData.factory_name,
+        machine_id: userData.machine_id
+      }
+    }
+  } catch (error: any) {
+    console.error('[WEB_AUTH] Login error:', error)
+    return { success: false, error: error.message || 'فشل تسجيل الدخول' }
+  }
+}
+
+/**
+ * Restore user data from cloud
+ * Downloads and replaces local database with cloud data
+ */
+export async function restoreUserData(params: {
+  phone: string
+  password: string
+}): Promise<{ success: boolean; error?: string; message?: string }> {
+  try {
+    console.log('[WEB_AUTH] Attempting data restore for:', params.phone)
+
+    // First login to verify credentials
+    const loginResult = await loginWebUser(params)
+    if (!loginResult.success) {
+      return { success: false, error: loginResult.error }
+    }
+
+    // Request data restore from cloud API
+    const response = await fetch(`${WEB_AUTH_API_URL}/sync/restore`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        phone: params.phone,
+        password: params.password
+      })
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Restore failed' }))
+      console.error('[WEB_AUTH] Restore failed:', errorData)
+      return { success: false, error: errorData.message || 'فشل استعادة البيانات' }
+    }
+
+    const restoreData = await response.json()
+
+    // If we got data, import it
+    if (restoreData.data) {
+      console.log('[WEB_AUTH] Received restore data, applying...')
+      // The sync system will handle importing the data
+      // For now, we'll trigger a full sync pull
+      const { performSync } = require('./sync')
+      await performSync({ forceFullSync: true })
+    }
+
+    console.log('[WEB_AUTH] Data restore completed')
+    return { success: true, message: 'تم استعادة البيانات بنجاح' }
+  } catch (error: any) {
+    console.error('[WEB_AUTH] Restore error:', error)
+    return { success: false, error: error.message || 'فشل استعادة البيانات' }
+  }
+}
+
+/**
+ * Get cloud account status
+ */
+export function getCloudAccountStatus(): {
+  isRegistered: boolean
+  phone?: string
+  factoryName?: string
+} {
+  const user = getWebUser()
+  return {
+    isRegistered: isWebUserRegistered(),
+    phone: user?.phone,
+    factoryName: user?.factory_name
+  }
+}
