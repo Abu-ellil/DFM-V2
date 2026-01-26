@@ -16,6 +16,8 @@ import { useWeighbridgeStore } from '../store/useWeighbridgeStore'
 import { useFinanceStore } from '../store/useFinanceStore'
 import { useCrateStore } from '../store/useCrateStore'
 import { useCustomerStore } from '../store/useCustomerStore'
+import { useAppStore } from '../store/useAppStore'
+import { useSettingsStore } from '../store/useSettingsStore'
 import { formatCurrency, formatNumber } from '../utils/format'
 
 type ReportType = 'weighbridge' | 'finance' | 'crates'
@@ -25,6 +27,8 @@ export default function Reports() {
   const { transactions: finance, fetchFinance } = useFinanceStore()
   const { transactions: crates, fetchCrates } = useCrateStore()
   const { customers, fetchCustomers } = useCustomerStore()
+  const { navigateToCustomer } = useAppStore()
+  const { settings, fetchSettings } = useSettingsStore()
 
   const [activeReport, setActiveReport] = useState<ReportType>('weighbridge')
   const [dateRange, setDateRange] = useState({
@@ -39,6 +43,7 @@ export default function Reports() {
     fetchFinance()
     fetchCrates()
     fetchCustomers()
+    fetchSettings()
   }, [])
 
   const filterData = (data: any[]) => {
@@ -57,7 +62,20 @@ export default function Reports() {
 
   const weighbridgeColumns = [
     { header: 'التاريخ', accessor: (t: any) => new Date(t.date).toLocaleDateString('ar-EG') },
-    { header: 'العميل', accessor: 'customer_name' as const },
+    {
+      header: 'العميل',
+      accessor: (t: any) => (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            navigateToCustomer(t.customer_id)
+          }}
+          className="text-emerald-600 hover:underline font-medium text-right"
+        >
+          {t.customer_name}
+        </button>
+      )
+    },
     { header: 'نوع البلح', accessor: 'date_type_name' as const },
     { header: 'الوزن القائم', accessor: (t: any) => formatNumber(t.gross_weight) },
     { header: 'الوزن الفارغ', accessor: (t: any) => formatNumber(t.tare_weight) },
@@ -70,7 +88,20 @@ export default function Reports() {
 
   const financeColumns = [
     { header: 'التاريخ', accessor: (t: any) => new Date(t.date).toLocaleDateString('ar-EG') },
-    { header: 'العميل', accessor: 'customer_name' as const },
+    {
+      header: 'العميل',
+      accessor: (t: any) => (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            navigateToCustomer(t.customer_id)
+          }}
+          className="text-emerald-600 hover:underline font-medium text-right"
+        >
+          {t.customer_name}
+        </button>
+      )
+    },
     { header: 'النوع', accessor: 'transaction_type' as const },
     {
       header: 'مقبوض',
@@ -87,7 +118,20 @@ export default function Reports() {
 
   const cratesColumns = [
     { header: 'التاريخ', accessor: (t: any) => new Date(t.date).toLocaleDateString('ar-EG') },
-    { header: 'العميل', accessor: 'customer_name' as const },
+    {
+      header: 'العميل',
+      accessor: (t: any) => (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            navigateToCustomer(t.customer_id)
+          }}
+          className="text-emerald-600 hover:underline font-medium text-right"
+        >
+          {t.customer_name}
+        </button>
+      )
+    },
     { header: 'النوع', accessor: 'crate_type_name' as const },
     { header: 'خارج', accessor: 'crates_out' as const, className: 'text-red-500 font-bold' },
     {
@@ -325,24 +369,62 @@ export default function Reports() {
       </div>
 
       <Card>
-        <div className="hidden print:block mb-6 text-center border-b pb-6">
-          <h1 className="text-3xl font-black mb-2">
-            مصنع تمور - تقرير{' '}
-            {activeReport === 'weighbridge'
-              ? 'الميزان'
-              : activeReport === 'finance'
-                ? 'الحركة المالية'
-                : 'حركة الصناديق'}
-          </h1>
-          <p className="text-slate-600 font-bold">
-            الفترة من: {new Date(dateRange.start).toLocaleDateString('ar-EG')} إلى:{' '}
-            {new Date(dateRange.end).toLocaleDateString('ar-EG')}
-          </p>
-          {selectedCustomer !== 'all' && (
-            <p className="text-emerald-600 font-black mt-2">
-              العميل: {customers.find((c) => c.id.toString() === selectedCustomer)?.name}
+        <div className="hidden print:block mb-8 border-b-4 border-emerald-600 pb-8">
+          <div className="flex justify-between items-start mb-6">
+            <div className="text-right flex-1">
+              <h1 className="text-5xl font-black text-emerald-800 mb-3 tracking-tight">
+                {settings.company_name || 'مصنع تمور'}
+              </h1>
+              <div className="space-y-1 text-slate-700 text-xl font-bold">
+                {settings.company_address && <p>{settings.company_address}</p>}
+                {settings.company_phone && <p>{settings.company_phone}</p>}
+              </div>
+            </div>
+            {settings.company_logo && (
+              <div className="bg-white p-3 rounded-2xl shadow-md border-2 border-slate-100">
+                <img
+                  src={settings.company_logo}
+                  alt="Logo"
+                  className="h-28 w-auto object-contain"
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center" aria-hidden="true">
+              <div className="w-full border-t-2 border-slate-200"></div>
+            </div>
+            <div className="relative flex justify-center">
+              <span className="bg-white px-8 py-3 rounded-full text-3xl font-black text-slate-800 border-3 border-emerald-600 shadow-lg">
+                تقرير{' '}
+                {activeReport === 'weighbridge'
+                  ? 'الميزان'
+                  : activeReport === 'finance'
+                    ? 'الحركة المالية'
+                    : 'حركة الصناديق'}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center px-6 py-3 bg-slate-50 rounded-xl border-2 border-slate-200 mt-4">
+            <div className="flex gap-8 text-lg">
+              <p className="font-bold">
+                <span className="text-slate-500">الفترة:</span>{' '}
+                {new Date(dateRange.start).toLocaleDateString('ar-EG')} -{' '}
+                {new Date(dateRange.end).toLocaleDateString('ar-EG')}
+              </p>
+              {selectedCustomer !== 'all' && (
+                <p className="font-bold text-emerald-700">
+                  <span className="text-slate-500">العميل:</span>{' '}
+                  {customers.find((c) => c.id.toString() === selectedCustomer)?.name}
+                </p>
+              )}
+            </div>
+            <p className="text-lg font-bold text-slate-500">
+              تاريخ التقرير: {new Date().toLocaleDateString('ar-EG')}
             </p>
-          )}
+          </div>
         </div>
 
         <Table
@@ -362,9 +444,26 @@ export default function Reports() {
           }
         />
 
-        <div className="hidden print:flex justify-between mt-12 pt-8 border-t font-bold">
-          <div>توقيع المستلم: ............................</div>
-          <div>توقيع المدير المسؤول: ............................</div>
+        <div className="hidden print:flex justify-between gap-8 mt-16 pt-10 border-t-4 border-emerald-600">
+          <div className="text-center flex-1">
+            <p className="text-lg font-bold text-slate-600 mb-16">توقيع المستلم</p>
+            <div className="w-full border-b-2 border-slate-400 pb-2"></div>
+          </div>
+          <div className="text-center flex-1">
+            <p className="text-lg font-bold text-slate-600 mb-16">توقيت المراجعة</p>
+            <div className="w-full border-b-2 border-slate-400 pb-2"></div>
+          </div>
+          <div className="text-center flex-1">
+            <p className="text-lg font-bold text-slate-600 mb-16">توقيع المدير المسؤول</p>
+            <div className="w-full border-b-2 border-slate-400 pb-2"></div>
+          </div>
+        </div>
+
+        <div className="hidden print:block mt-12 text-center">
+          <p className="text-slate-500 font-bold italic text-lg">
+            تم استخراج هذا التقرير آلياً من نظام إدارة مصانع التمور -{' '}
+            {new Date().toLocaleString('ar-EG')}
+          </p>
         </div>
       </Card>
     </div>

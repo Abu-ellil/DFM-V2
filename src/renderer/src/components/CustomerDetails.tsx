@@ -623,10 +623,26 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
       )}
 
       {/* Print Footer */}
-      <div className="hidden print:flex justify-between mt-12 pt-8 border-t font-bold">
-        <div>توقيع العميل: ............................</div>
-        <div>توقيع المحاسب: ............................</div>
-        <div>ختم المصنع: ............................</div>
+      <div className="hidden print:flex justify-between gap-8 mt-16 pt-10 border-t-4 border-emerald-600">
+        <div className="text-center flex-1">
+          <p className="text-lg font-bold text-slate-600 mb-16">توقيع العميل</p>
+          <div className="w-full border-b-2 border-slate-400 pb-2"></div>
+        </div>
+        <div className="text-center flex-1">
+          <p className="text-lg font-bold text-slate-600 mb-16">توقيت المراجعة</p>
+          <div className="w-full border-b-2 border-slate-400 pb-2"></div>
+        </div>
+        <div className="text-center flex-1">
+          <p className="text-lg font-bold text-slate-600 mb-16">توقيع المحاسب / المدير</p>
+          <div className="w-full border-b-2 border-slate-400 pb-2"></div>
+        </div>
+      </div>
+
+      <div className="hidden print:block mt-12 text-center">
+        <p className="text-slate-500 font-bold italic text-lg">
+          تم استخراج كشف الحساب آلياً من نظام إدارة مصانع التمور -{' '}
+          {new Date().toLocaleString('ar-EG')}
+        </p>
       </div>
 
       {/* Finance Modal */}
