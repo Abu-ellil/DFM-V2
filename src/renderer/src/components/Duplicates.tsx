@@ -13,6 +13,7 @@ import {
   Package
 } from 'lucide-react'
 import { formatCurrency, formatNumber } from '../utils/format'
+import { useAppStore } from '../store/useAppStore'
 
 type DuplicateData = {
   weighbridge: any[]
@@ -32,6 +33,7 @@ export default function Duplicates() {
   const [data, setData] = useState<DuplicateData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'weighbridge' | 'crates' | 'finance'>('weighbridge')
+  const { navigateToCustomer } = useAppStore()
 
   const fetchDuplicates = async () => {
     setIsLoading(true)
@@ -91,7 +93,20 @@ export default function Duplicates() {
 
   const weighbridgeColumns = [
     { header: 'التاريخ', accessor: (t: any) => new Date(t.date).toLocaleDateString('ar-EG') },
-    { header: 'العميل', accessor: 'customer_name' as const },
+    {
+      header: 'العميل',
+      accessor: (t: any) => (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            navigateToCustomer(t.customer_id)
+          }}
+          className="text-emerald-600 hover:underline font-medium text-right"
+        >
+          {t.customer_name}
+        </button>
+      )
+    },
     { header: 'الوزن القائم', accessor: (t: any) => formatNumber(t.gross_weight) },
     {
       header: 'الوزن الصافي',
@@ -122,7 +137,20 @@ export default function Duplicates() {
 
   const cratesColumns = [
     { header: 'التاريخ', accessor: (t: any) => new Date(t.date).toLocaleDateString('ar-EG') },
-    { header: 'العميل', accessor: 'customer_name' as const },
+    {
+      header: 'العميل',
+      accessor: (t: any) => (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            navigateToCustomer(t.customer_id)
+          }}
+          className="text-emerald-600 hover:underline font-medium text-right"
+        >
+          {t.customer_name}
+        </button>
+      )
+    },
     { header: 'خارج', accessor: 'crates_out' as const, className: 'text-red-500 font-bold' },
     {
       header: 'عائد',
@@ -153,7 +181,20 @@ export default function Duplicates() {
 
   const financeColumns = [
     { header: 'التاريخ', accessor: (t: any) => new Date(t.date).toLocaleDateString('ar-EG') },
-    { header: 'العميل', accessor: 'customer_name' as const },
+    {
+      header: 'العميل',
+      accessor: (t: any) => (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            navigateToCustomer(t.customer_id)
+          }}
+          className="text-emerald-600 hover:underline font-medium text-right"
+        >
+          {t.customer_name}
+        </button>
+      )
+    },
     { header: 'النوع', accessor: 'transaction_type' as const },
     {
       header: 'مقبوض',

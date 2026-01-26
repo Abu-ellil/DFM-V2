@@ -26,6 +26,8 @@ const initSchema = (db: Database): void => {
     telegram_id INTEGER UNIQUE,
     phone TEXT,
     full_name TEXT,
+    machine_id TEXT,
+    web_password TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`)
 
@@ -229,6 +231,12 @@ const initSchema = (db: Database): void => {
     'CREATE INDEX IF NOT EXISTS idx_notification_queue_created ON notification_queue(created_at)'
   )
 
+  // Performance indexes for customer account queries
+  db.run('CREATE INDEX IF NOT EXISTS idx_weighbridge_customer_total ON weighbridge(customer_id, total)')
+  db.run('CREATE INDEX IF NOT EXISTS idx_finance_customer_paid ON finance(customer_id, amount_paid)')
+  db.run('CREATE INDEX IF NOT EXISTS idx_finance_customer_received ON finance(customer_id, amount_received)')
+  db.run('CREATE INDEX IF NOT EXISTS idx_crates_customer_balance ON crates(customer_id, crates_out, crates_returned)')
+
   // Seed default admin if not exists
   const res = db.exec("SELECT id FROM users WHERE username = 'admin'")
   if (res.length === 0 || res[0].values.length === 0) {
@@ -290,6 +298,9 @@ const initSchema = (db: Database): void => {
 
   // Run sync-related migrations
   runSyncMigrations(db)
+
+  // Run web auth migrations
+  runWebAuthMigrations(db)
 }
 
 /**
@@ -371,6 +382,37 @@ const runSyncMigrations = (db: Database): void => {
   // Create indexes for sync tables
   db.run('CREATE INDEX IF NOT EXISTS idx_sync_queue_synced ON sync_queue(synced)')
   db.run('CREATE INDEX IF NOT EXISTS idx_conflict_log_table ON _conflict_log(table_name, record_id)')
+}
+
+/**
+ * Add web authentication columns for existing databases
+ */
+const runWebAuthMigrations = (db: Database): void => {
+  // Add machine_id and web_password columns to users table if they don't exist
+  try {
+    db.run(`ALTER TABLE users ADD COLUMN machine_id TEXT`)
+  } catch (e) {
+    // Column already exists, ignore error
+  }
+  try {
+    db.run(`ALTER TABLE users ADD COLUMN web_password TEXT`)
+  } catch (e) {
+    // Column already exists, ignore error
+  }
+
+  // Create index for machine_id
+  try {
+    db.run('CREATE INDEX IF NOT EXISTS idx_users_machine_id ON users(machine_id)')
+  } catch (e) {
+    // Index already exists or error occurred
+  }
+
+  // Create index for phone
+  try {
+    db.run('CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone)')
+  } catch (e) {
+    // Index already exists or error occurred
+  }
 }
 
 export const initializeDatabase = async (force: boolean = false): Promise<Database> => {

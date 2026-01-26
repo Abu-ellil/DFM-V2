@@ -354,16 +354,20 @@ export default function Reports() {
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {getStats()?.map((stat, i) => (
           <Card key={i} className="bg-white dark:bg-slate-900 border-r-4 border-r-emerald-500">
-            <div className="flex items-center gap-4">
-              <div className={`p-3 rounded-xl bg-slate-50 dark:bg-slate-800 ${stat.color}`}>
-                {stat.icon}
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-slate-500 truncate" title={stat.label}>
+                  {stat.label}
+                </p>
+                <p className="text-xl lg:text-2xl font-black text-slate-800 dark:text-white break-words">
+                  {stat.value}
+                </p>
               </div>
-              <div>
-                <p className="text-sm font-bold text-slate-500">{stat.label}</p>
-                <p className="text-xl font-black text-slate-800 dark:text-white">{stat.value}</p>
+              <div className={`p-3 rounded-xl bg-slate-50 dark:bg-slate-800 shrink-0 ${stat.color}`}>
+                {stat.icon}
               </div>
             </div>
           </Card>

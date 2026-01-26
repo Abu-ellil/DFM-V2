@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useCrateStore } from '../store/useCrateStore'
 import { useCustomerStore } from '../store/useCustomerStore'
+import { useAppStore } from '../store/useAppStore'
 import { Card } from './ui/Card'
 import { Table } from './ui/Table'
 import { Search, History, PieChart, Plus, X, Edit2, Trash2 } from 'lucide-react'
@@ -18,6 +19,7 @@ export default function Crates() {
     isLoading
   } = useCrateStore()
   const { customers, fetchCustomers } = useCustomerStore()
+  const { navigateToCustomer } = useAppStore()
   const [activeView, setActiveView] = useState<'summary' | 'history'>('summary')
   const [searchTerm, setSearchTerm] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -92,14 +94,31 @@ export default function Crates() {
   const filteredHistory = transactions.filter((t) => t.customer_name.includes(searchTerm))
 
   const summaryColumns = [
-    { header: 'العميل', accessor: 'customer_name' as const },
+    {
+      header: 'العميل',
+      accessor: (s: any) => (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            navigateToCustomer(s.customer_id)
+          }}
+          className="text-emerald-600 hover:underline font-medium text-right"
+        >
+          {s.customer_name}
+        </button>
+      )
+    },
     { header: 'إجمالي الخارج', accessor: (s: any) => formatNumber(s.total_out) },
     { header: 'إجمالي العائد', accessor: (s: any) => formatNumber(s.total_returned) },
     {
       header: 'الرصيد المتبقي',
       accessor: (s: any) => (
-        <span className={`font-bold ${s.balance > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
-          {formatNumber(s.balance)}
+        <span
+          className={`font-bold ${
+            s.total_out - s.total_returned > 0 ? 'text-rose-600' : 'text-emerald-600'
+          }`}
+        >
+          {formatNumber(s.total_out - s.total_returned)}
         </span>
       )
     }
@@ -107,7 +126,20 @@ export default function Crates() {
 
   const historyColumns = [
     { header: 'التاريخ', accessor: (t: any) => new Date(t.date).toLocaleDateString('ar-EG') },
-    { header: 'العميل', accessor: 'customer_name' as const },
+    {
+      header: 'العميل',
+      accessor: (t: any) => (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            navigateToCustomer(t.customer_id)
+          }}
+          className="text-emerald-600 hover:underline font-medium text-right"
+        >
+          {t.customer_name}
+        </button>
+      )
+    },
     { header: 'النوع', accessor: 'crate_type_name' as const },
     {
       header: 'خارج',

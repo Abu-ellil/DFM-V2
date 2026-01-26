@@ -33,7 +33,12 @@
       "Bash(sqlite3:*)",
       "Bash(npx tsc:*)",
       "Bash(vercel:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(npm start)",
+      "Bash(timeout:*)",
+      "Bash(dir:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npx prettier:*)"
     ]
   }
 }

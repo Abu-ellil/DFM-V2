@@ -51,6 +51,10 @@ declare global {
         update: (id: number, data: any) => Promise<{ success: boolean; message?: string }>
         delete: (id: number) => Promise<{ success: boolean; message?: string }>
       }
+      customerAccounts: {
+        getSummary: (customerId?: number) => Promise<any>
+        getRecentTransactions: (customerId: number, limit?: number) => Promise<any[]>
+      }
       settings: {
         getAll: () => Promise<Record<string, string>>
         update: (key: string, value: string) => Promise<{ success: boolean }>
@@ -136,6 +140,8 @@ declare global {
         clearOldConflicts: (olderThanDays?: number) => Promise<{ success: boolean; data: { cleared: number } }>
       }
       print: () => Promise<{ success: boolean; message?: string }>
+      on?: (channel: string, callback: (...args: any[]) => void) => void
+      removeListener?: (channel: string, callback: (...args: any[]) => void) => void
     }
   }
 }

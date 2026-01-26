@@ -47,6 +47,11 @@ const api = {
     update: (id, data) => ipcRenderer.invoke('finance:update', id, data),
     delete: (id) => ipcRenderer.invoke('finance:delete', id)
   },
+  customerAccounts: {
+    getSummary: (customerId?: number) => ipcRenderer.invoke('customerAccounts:getSummary', customerId),
+    getRecentTransactions: (customerId: number, limit?: number) =>
+      ipcRenderer.invoke('customerAccounts:getRecentTransactions', customerId, limit)
+  },
   settings: {
     getAll: () => ipcRenderer.invoke('settings:getAll'),
     update: (key, value) => ipcRenderer.invoke('settings:update', key, value),
@@ -101,7 +106,13 @@ const api = {
     clearOldConflicts: (olderThanDays?: number) =>
       ipcRenderer.invoke('sync:clearOldConflicts', olderThanDays)
   },
-  print: () => ipcRenderer.invoke('app:print')
+  print: () => ipcRenderer.invoke('app:print'),
+  on: (channel, callback) => {
+    ipcRenderer.on(channel, (_event, ...args) => callback(...args))
+  },
+  removeListener: (channel, callback) => {
+    ipcRenderer.removeListener(channel, (_event, ...args) => callback(...args))
+  }
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

@@ -25,7 +25,7 @@ interface WeighbridgeStore {
   addTransaction: (data: any) => Promise<{ success: boolean; message?: string }>
 }
 
-export const useWeighbridgeStore = create<WeighbridgeStore>((set) => ({
+export const useWeighbridgeStore = create<WeighbridgeStore>((set, get) => ({
   transactions: [],
   isLoading: false,
   fetchTransactions: async () => {
@@ -44,6 +44,10 @@ export const useWeighbridgeStore = create<WeighbridgeStore>((set) => ({
       if (result.success) {
         const transactions = await window.api.weighbridge.getAll()
         set({ transactions })
+
+        // Trigger customer account refresh - Import dynamically to avoid circular dependency
+        const { useCustomerAccountStore } = require('./useCustomerAccountStore')
+        useCustomerAccountStore.getState().fetchAllSummaries()
       }
       return result
     } catch {

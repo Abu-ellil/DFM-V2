@@ -3,12 +3,10 @@ import { readFileSync, writeFileSync, existsSync, unlinkSync } from 'fs'
 import { join } from 'path'
 import crypto from 'crypto'
 import { app } from 'electron'
-import { is } from '@electron-toolkit/utils'
 
 const getLicenseFilePath = (): string => {
-  if (is.dev) {
-    return join(app.getAppPath(), '.license')
-  }
+  // Always use userData directory for license persistence
+  // This ensures the license persists across app restarts in both dev and production
   return join(app.getPath('userData'), '.license')
 }
 
@@ -186,7 +184,8 @@ export function saveLicense(licenseKey: string, factoryName: string): boolean {
       licenseKey,
       factoryName,
       activatedAt: new Date().toISOString(),
-      expiryDate: expiryDate.toISOString()
+      expiryDate: expiryDate.toISOString(),
+      lastOnlineCheck: new Date().toISOString() // Initialize to prevent immediate re-verification
     }
 
     writeFileSync(LICENSE_FILE, JSON.stringify(licenseData, null, 2))
@@ -226,6 +225,28 @@ async function verifyLicenseOnline(licenseKey: string, machineId: string): Promi
 }
 
 /**
+ * Migrate old license files to include lastOnlineCheck field
+ */
+function migrateLicenseFile(): void {
+  try {
+    if (!existsSync(LICENSE_FILE)) {
+      return
+    }
+
+    const data = JSON.parse(readFileSync(LICENSE_FILE, 'utf-8'))
+
+    // If lastOnlineCheck doesn't exist, add it with the activation date
+    if (!data.lastOnlineCheck) {
+      data.lastOnlineCheck = data.activatedAt || new Date().toISOString()
+      writeFileSync(LICENSE_FILE, JSON.stringify(data, null, 2))
+      console.log('License file migrated: added lastOnlineCheck')
+    }
+  } catch (error) {
+    console.error('Error migrating license file:', error)
+  }
+}
+
+/**
  * Check if online verification is needed (once every 7 days)
  */
 function needsOnlineVerification(): boolean {
@@ -233,6 +254,9 @@ function needsOnlineVerification(): boolean {
     if (!existsSync(LICENSE_FILE)) {
       return false
     }
+
+    // Migrate old license files first
+    migrateLicenseFile()
 
     const data = JSON.parse(readFileSync(LICENSE_FILE, 'utf-8'))
     if (!data.lastOnlineCheck) {

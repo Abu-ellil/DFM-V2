@@ -1,6 +1,7 @@
 import { getPendingChanges, markAsSynced, markAsFailed, getLastSyncCheckpoint, updateLastSyncCheckpoint, getPendingChangesCount } from './queue'
 import { pushChanges, pullChanges } from './api'
 import { applyRemoteChanges } from './conflict'
+import { registerWebUser, isWebUserRegistered } from '../web-auth'
 import type { SyncResult, SyncOptions } from './types'
 
 let syncInProgress = false
@@ -238,8 +239,20 @@ export async function manualSync(): Promise<SyncResult> {
 
 /**
  * Enable sync with default settings
+ * Also registers web user if not already registered
  */
-export function enableSync(): void {
+export async function enableSync(webUserInfo?: { phone: string; password: string; full_name?: string; factory_name?: string }): Promise<void> {
+  // Register web user if info provided and not already registered
+  if (webUserInfo && !isWebUserRegistered()) {
+    console.log('[SYNC] Registering web user...')
+    const result = await registerWebUser(webUserInfo)
+    if (result.success) {
+      console.log('[SYNC] Web user registered successfully')
+    } else {
+      console.error('[SYNC] Failed to register web user:', result.error)
+    }
+  }
+
   startAutoSync(30000) // 30 second interval
 }
 

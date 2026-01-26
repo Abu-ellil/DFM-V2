@@ -16,6 +16,7 @@ interface CrateTransaction {
 }
 
 interface CrateSummary {
+  customer_id: number
   customer_name: string
   total_out: number
   total_returned: number
@@ -58,6 +59,10 @@ export const useCrateStore = create<CrateStore>((set) => ({
           window.api.crates.getSummary()
         ])
         set({ transactions, summary })
+
+        // Trigger customer account refresh
+        const { useCustomerAccountStore } = require('./useCustomerAccountStore')
+        useCustomerAccountStore.getState().fetchAllSummaries()
       }
       return result
     } catch {
@@ -73,6 +78,10 @@ export const useCrateStore = create<CrateStore>((set) => ({
           window.api.crates.getSummary()
         ])
         set({ transactions, summary })
+
+        // Trigger customer account refresh
+        const { useCustomerAccountStore } = require('./useCustomerAccountStore')
+        useCustomerAccountStore.getState().fetchAllSummaries()
       }
       return result
     } catch {
@@ -88,6 +97,10 @@ export const useCrateStore = create<CrateStore>((set) => ({
           window.api.crates.getSummary()
         ])
         set({ transactions, summary })
+
+        // Trigger customer account refresh
+        const { useCustomerAccountStore } = require('./useCustomerAccountStore')
+        useCustomerAccountStore.getState().fetchAllSummaries()
       }
       return result
     } catch {

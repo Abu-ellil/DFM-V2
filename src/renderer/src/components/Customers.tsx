@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useCustomerStore } from '../store/useCustomerStore'
+import { useCustomerAccountStore } from '../store/useCustomerAccountStore'
 import { Card } from './ui/Card'
 import { Table } from './ui/Table'
-import { Search, UserPlus, Eye, Pencil, Trash2 } from 'lucide-react'
+import { Search, UserPlus, Eye, Pencil, Trash2, Wallet, Package } from 'lucide-react'
 import { toast } from 'react-toastify'
+import { formatCurrency } from '../utils/format'
 
 interface Customer {
   id: number
@@ -20,6 +22,7 @@ interface CustomersProps {
 export default function Customers({ onViewCustomer }: CustomersProps) {
   const { customers, fetchCustomers, addCustomer, updateCustomer, deleteCustomer, isLoading } =
     useCustomerStore()
+  const { summaries, fetchAllSummaries, isLoading: summariesLoading } = useCustomerAccountStore()
   const [searchTerm, setSearchTerm] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
@@ -28,7 +31,29 @@ export default function Customers({ onViewCustomer }: CustomersProps) {
 
   useEffect(() => {
     fetchCustomers()
+    fetchAllSummaries()
   }, [])
+
+  // Listen for real-time account updates
+  useEffect(() => {
+    const handleAccountUpdate = () => {
+      fetchAllSummaries()
+    }
+
+    window.api?.on?.('customerAccounts:updated', handleAccountUpdate)
+    window.api?.on?.('customerAccounts:bulkUpdate', handleAccountUpdate)
+
+    return () => {
+      window.api?.removeListener?.('customerAccounts:updated', handleAccountUpdate)
+      window.api?.removeListener?.('customerAccounts:bulkUpdate', handleAccountUpdate)
+    }
+  }, [])
+
+  // Create a map of customer_id -> account summary for quick lookup
+  const summaryMap = summaries.reduce((acc, summary) => {
+    acc[summary.customer_id] = summary
+    return acc
+  }, {} as Record<number, any>)
 
   const filteredCustomers = customers.filter(
     (c) => c.name.includes(searchTerm) || (c.phone && c.phone.includes(searchTerm))
@@ -46,6 +71,7 @@ export default function Customers({ onViewCustomer }: CustomersProps) {
       toast.success('تم إضافة العميل بنجاح')
       setIsModalOpen(false)
       setNewCustomer({ name: '', type: 'مورد', phone: '' })
+      fetchAllSummaries() // Refresh summaries to include new customer
     } else {
       toast.error(result.message || 'حدث خطأ ما')
     }
@@ -91,12 +117,52 @@ export default function Customers({ onViewCustomer }: CustomersProps) {
   }
 
   const columns = [
-    { header: 'الاسم', accessor: 'name' as const },
+    {
+      header: 'الاسم',
+      accessor: (c: any) => (
+        <button
+          onClick={() => onViewCustomer?.(c.id)}
+          className="text-emerald-600 hover:underline font-medium text-right"
+        >
+          {c.name}
+        </button>
+      )
+    },
     { header: 'النوع', accessor: 'type' as const },
     { header: 'الهاتف', accessor: 'phone' as const },
     {
-      header: 'تاريخ الإضافة',
-      accessor: (c: any) => new Date(c.created_at).toLocaleDateString('ar-EG')
+      header: 'الرصيد المالي',
+      accessor: (c: any) => {
+        const summary = summaryMap[c.id]
+        const balance = summary?.net_balance || 0
+        const isPositive = balance >= 0
+        return (
+          <div className="flex items-center gap-1">
+            <Wallet size={14} />
+            <span
+              className={`font-bold ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}
+              dir="ltr"
+            >
+              {formatCurrency(Math.abs(balance))}
+            </span>
+          </div>
+        )
+      }
+    },
+    {
+      header: 'الصناديق',
+      accessor: (c: any) => {
+        const summary = summaryMap[c.id]
+        const crateBalance = summary?.crate_balance || 0
+        return (
+          <div className="flex items-center gap-1">
+            <Package size={14} />
+            <span className={`font-bold ${crateBalance > 0 ? 'text-orange-600' : 'text-slate-500'}`}>
+              {crateBalance > 0 ? `${crateBalance} صندوق` : '-'}
+            </span>
+          </div>
+        )
+      }
     },
     {
       header: 'إجراءات',
@@ -158,7 +224,7 @@ export default function Customers({ onViewCustomer }: CustomersProps) {
           </div>
         </div>
 
-        {isLoading ? (
+        {isLoading || summariesLoading ? (
           <div className="text-center py-10">جاري التحميل...</div>
         ) : (
           <Table columns={columns} data={filteredCustomers} />

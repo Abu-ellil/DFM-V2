@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSettingsStore } from '../store/useSettingsStore'
+import { useCustomerAccountStore } from '../store/useCustomerAccountStore'
 import { Card } from './ui/Card'
 import { SyncSettings } from './SyncSettings'
 import {
@@ -54,6 +55,20 @@ export default function Settings() {
     if (settings.company_name) setFactoryName(settings.company_name)
     if (settings.telegram_token) setBotToken(settings.telegram_token)
   }, [settings])
+
+  // Listen for bulk customer account updates (e.g., after Excel import)
+  useEffect(() => {
+    const handleBulkUpdate = ({ count }: { count: number }) => {
+      toast.success(`تم استيراد ${count} عميل بنجاح`)
+      fetchDataManagement()
+      useCustomerAccountStore.getState().fetchAllSummaries()
+    }
+
+    window.api?.on?.('customerAccounts:bulkUpdate', handleBulkUpdate)
+    return () => {
+      window.api?.removeListener?.('customerAccounts:bulkUpdate', handleBulkUpdate)
+    }
+  }, [])
 
   const fetchDataManagement = async () => {
     const [dt, ct, sv] = await Promise.all([
@@ -386,20 +401,21 @@ export default function Settings() {
               <div className="flex gap-2">
                 <input
                   type="text"
-                  className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
                   value={formData.company_name}
                   onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
                 />
                 <button
                   onClick={() => handleSave('company_name', formData.company_name)}
-                  className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors"
+                  className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors shrink-0"
+                  title="حفظ"
                 >
                   <Save size={20} />
                 </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
                   العنوان
@@ -407,13 +423,14 @@ export default function Settings() {
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
                     value={formData.company_address}
                     onChange={(e) => setFormData({ ...formData, company_address: e.target.value })}
                   />
                   <button
                     onClick={() => handleSave('company_address', formData.company_address)}
-                    className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors"
+                    className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors shrink-0"
+                    title="حفظ"
                   >
                     <Save size={20} />
                   </button>
@@ -426,13 +443,14 @@ export default function Settings() {
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
                     value={formData.company_phone}
                     onChange={(e) => setFormData({ ...formData, company_phone: e.target.value })}
                   />
                   <button
                     onClick={() => handleSave('company_phone', formData.company_phone)}
-                    className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors"
+                    className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors shrink-0"
+                    title="حفظ"
                   >
                     <Save size={20} />
                   </button>
@@ -440,7 +458,7 @@ export default function Settings() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
                   وزن الصندوق الافتراضي (كجم)
@@ -448,13 +466,14 @@ export default function Settings() {
                 <div className="flex gap-2">
                   <input
                     type="number"
-                    className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
                     value={formData.crate_weight}
                     onChange={(e) => setFormData({ ...formData, crate_weight: e.target.value })}
                   />
                   <button
                     onClick={() => handleSave('crate_weight', formData.crate_weight)}
-                    className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors"
+                    className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors shrink-0"
+                    title="حفظ"
                   >
                     <Save size={20} />
                   </button>
@@ -467,13 +486,14 @@ export default function Settings() {
                 <div className="flex gap-2">
                   <input
                     type="number"
-                    className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
                     value={formData.qantar_weight}
                     onChange={(e) => setFormData({ ...formData, qantar_weight: e.target.value })}
                   />
                   <button
                     onClick={() => handleSave('qantar_weight', formData.qantar_weight)}
-                    className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors"
+                    className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors shrink-0"
+                    title="حفظ"
                   >
                     <Save size={20} />
                   </button>
@@ -546,13 +566,13 @@ export default function Settings() {
                 <input
                   type="text"
                   placeholder="نوع جديد..."
-                  className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-amber-500"
+                  className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-amber-500"
                   value={newName.dateType}
                   onChange={(e) => setNewName({ ...newName, dateType: e.target.value })}
                 />
                 <button
                   onClick={handleAddDateType}
-                  className="bg-amber-600 text-white p-1.5 rounded-lg hover:bg-amber-700 transition-colors"
+                  className="bg-amber-600 text-white p-1.5 rounded-lg hover:bg-amber-700 transition-colors shrink-0"
                 >
                   <Plus size={18} />
                 </button>
@@ -578,11 +598,11 @@ export default function Settings() {
             {/* Crate Types */}
             <div>
               <label className="block text-sm font-bold text-slate-600 mb-2">أنواع الصناديق</label>
-              <div className="grid grid-cols-2 gap-2 mb-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
                 <input
                   type="text"
                   placeholder="اسم الصندوق..."
-                  className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-amber-500"
                   value={newName.crateType}
                   onChange={(e) => setNewName({ ...newName, crateType: e.target.value })}
                 />
@@ -590,13 +610,13 @@ export default function Settings() {
                   <input
                     type="number"
                     placeholder="الوزن..."
-                    className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-amber-500"
+                    className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-amber-500"
                     value={newName.crateWeight}
                     onChange={(e) => setNewName({ ...newName, crateWeight: e.target.value })}
                   />
                   <button
                     onClick={handleAddCrateType}
-                    className="bg-amber-600 text-white p-1.5 rounded-lg hover:bg-amber-700 transition-colors"
+                    className="bg-amber-600 text-white p-1.5 rounded-lg hover:bg-amber-700 transition-colors shrink-0"
                   >
                     <Plus size={18} />
                   </button>
@@ -627,13 +647,13 @@ export default function Settings() {
                 <input
                   type="text"
                   placeholder="اسم المشرف..."
-                  className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-amber-500"
+                  className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-amber-500"
                   value={newName.supervisor}
                   onChange={(e) => setNewName({ ...newName, supervisor: e.target.value })}
                 />
                 <button
                   onClick={handleAddSupervisor}
-                  className="bg-amber-600 text-white p-1.5 rounded-lg hover:bg-amber-700 transition-colors"
+                  className="bg-amber-600 text-white p-1.5 rounded-lg hover:bg-amber-700 transition-colors shrink-0"
                 >
                   <Plus size={18} />
                 </button>
@@ -690,13 +710,13 @@ export default function Settings() {
               <div className="flex gap-2">
                 <input
                   type="password"
-                  className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
                   value={formData.telegram_token}
                   onChange={(e) => setFormData({ ...formData, telegram_token: e.target.value })}
                 />
                 <button
                   onClick={() => handleSave('telegram_token', formData.telegram_token)}
-                  className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors"
+                  className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors shrink-0"
                 >
                   <Save size={20} />
                 </button>
@@ -710,13 +730,13 @@ export default function Settings() {
               <div className="flex gap-2">
                 <input
                   type="text"
-                  className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
                   value={formData.telegram_chat_id}
                   onChange={(e) => setFormData({ ...formData, telegram_chat_id: e.target.value })}
                 />
                 <button
                   onClick={() => handleSave('telegram_chat_id', formData.telegram_chat_id)}
-                  className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors"
+                  className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors shrink-0"
                 >
                   <Save size={20} />
                 </button>
@@ -774,13 +794,13 @@ export default function Settings() {
                 <input
                   type="password"
                   placeholder="Telegram Bot Token"
-                  className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                  className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                   value={botToken}
                   onChange={(e) => setBotToken(e.target.value)}
                 />
                 <button
                   onClick={handleTestBotConnection}
-                  className="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700 transition-colors text-sm font-bold"
+                  className="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700 transition-colors text-sm font-bold shrink-0"
                 >
                   اختبار
                 </button>
@@ -788,7 +808,7 @@ export default function Settings() {
             </div>
 
             {/* Bot Controls */}
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <button
                 onClick={handleStartBot}
                 disabled={!formData.telegram_token}

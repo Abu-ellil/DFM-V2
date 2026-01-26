@@ -14,6 +14,7 @@ interface FinanceTransaction {
 }
 
 interface FinanceSummary {
+  customer_id: number
   customer_name: string
   total_paid: number
   total_received: number
@@ -56,6 +57,10 @@ export const useFinanceStore = create<FinanceStore>((set) => ({
           window.api.finance.getSummary()
         ])
         set({ transactions, summary })
+
+        // Trigger customer account refresh
+        const { useCustomerAccountStore } = require('./useCustomerAccountStore')
+        useCustomerAccountStore.getState().fetchAllSummaries()
       }
       return result
     } catch {
@@ -71,6 +76,10 @@ export const useFinanceStore = create<FinanceStore>((set) => ({
           window.api.finance.getSummary()
         ])
         set({ transactions, summary })
+
+        // Trigger customer account refresh
+        const { useCustomerAccountStore } = require('./useCustomerAccountStore')
+        useCustomerAccountStore.getState().fetchAllSummaries()
       }
       return result
     } catch {
@@ -86,6 +95,10 @@ export const useFinanceStore = create<FinanceStore>((set) => ({
           window.api.finance.getSummary()
         ])
         set({ transactions, summary })
+
+        // Trigger customer account refresh
+        const { useCustomerAccountStore } = require('./useCustomerAccountStore')
+        useCustomerAccountStore.getState().fetchAllSummaries()
       }
       return result
     } catch {

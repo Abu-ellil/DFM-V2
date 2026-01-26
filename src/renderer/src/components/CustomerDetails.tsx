@@ -4,6 +4,7 @@ import { useWeighbridgeStore } from '../store/useWeighbridgeStore'
 import { useFinanceStore } from '../store/useFinanceStore'
 import { useCrateStore } from '../store/useCrateStore'
 import { useSettingsStore } from '../store/useSettingsStore'
+import { useCustomerAccountStore } from '../store/useCustomerAccountStore'
 import { Card } from './ui/Card'
 import { Table } from './ui/Table'
 import { toast } from 'react-toastify'
@@ -33,6 +34,8 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
   const { transactions: finance, fetchFinance } = useFinanceStore()
   const { transactions: crates, fetchCrates } = useCrateStore()
   const { settings, fetchSettings } = useSettingsStore()
+  const { selectedCustomer: accountSummary, fetchCustomerSummary, refreshSelectedCustomer } =
+    useCustomerAccountStore()
 
   const [activeTab, setActiveTab] = useState<'all' | 'weighbridge' | 'finance' | 'crates'>('all')
   const [isFinanceModalOpen, setIsFinanceModalOpen] = useState(false)
@@ -85,6 +88,25 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
     fetchCrates()
     fetchSettings()
     fetchAuxData()
+    fetchCustomerSummary(customerId)
+  }, [customerId])
+
+  // Listen for real-time updates
+  useEffect(() => {
+    const handleAccountUpdate = ({ customerId: updatedId }: { customerId: number }) => {
+      if (updatedId === customerId) {
+        refreshSelectedCustomer()
+        fetchWeighbridge()
+        fetchFinance()
+        fetchCrates()
+      }
+    }
+
+    window.api?.on?.('customerAccounts:updated', handleAccountUpdate)
+
+    return () => {
+      window.api?.removeListener?.('customerAccounts:updated', handleAccountUpdate)
+    }
   }, [customerId])
 
   const fetchAuxData = async () => {
@@ -141,15 +163,14 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
 
   const totalNetWeight = customerWeighbridge.reduce((acc, curr) => acc + curr.net_weight, 0)
 
-  // حساب الإجماليات بشكل واضح
-  const totalSupplied = customerFinance.reduce((acc, curr) => acc + curr.amount_paid, 0) // توريدات البلح - له على المصنع
-  const totalReceived = customerFinance.reduce((acc, curr) => acc + curr.amount_received, 0) // السلف والمصروفات - عليه للمصنع
-  const totalFinanceBalance = totalSupplied - totalReceived // الرصيد النهائي
+  // حساب الإجماليات بشكل واضح - Using backend calculated values
+  const totalWeighbridgeDebt = accountSummary?.total_weighbridge_debt || 0 // دين الميزان - أصل قيمة التمور
+  const totalCashPayments = accountSummary?.total_paid || 0 // توريدات البلح نقداً
+  const totalAdvances = accountSummary?.total_received || 0 // السلف والمصروفات
+  const totalSupplied = totalCashPayments + totalWeighbridgeDebt // إجمالي ما للمورد (تمور + نقد)
+  const totalFinanceBalance = accountSummary?.net_balance || 0 // الرصيد النهائي
 
-  const cratesBalance = customerCrates.reduce(
-    (acc, curr) => acc + (curr.crates_out - curr.crates_returned),
-    0
-  )
+  const cratesBalance = accountSummary?.crate_balance || 0
 
   const weighbridgeColumns = [
     { header: 'التاريخ', accessor: (t: any) => new Date(t.date).toLocaleDateString('ar-EG') },
@@ -360,27 +381,55 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
               </h3>
             </div>
 
-            {/* التوريدات - له على المصنع */}
-            <div className="bg-emerald-500/20 rounded-xl p-4 border-2 border-emerald-400/30">
-              <div className="flex justify-between items-center">
+            {/* دين الميزان - قيمة التمور المسلمة */}
+            <div className="bg-blue-500/20 rounded-xl p-4 border-2 border-blue-400/30">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                 <div>
-                  <p className="text-emerald-300 text-sm font-bold mb-1">إجمالي توريدات البلح</p>
-                  <p className="text-xs text-slate-300">(له على المصنع)</p>
+                  <p className="text-blue-300 text-sm font-bold mb-1">دين الميزان (قيمة التمور)</p>
+                  <p className="text-xs text-slate-300">(المصنع عليه للعميل)</p>
                 </div>
-                <p className="text-3xl font-black text-emerald-400">
+                <p className="text-2xl md:text-3xl font-black text-blue-400 break-all">
+                  {formatCurrency(totalWeighbridgeDebt)}
+                </p>
+              </div>
+            </div>
+
+            {/* توريدات البلح نقداً */}
+            <div className="bg-emerald-500/20 rounded-xl p-4 border-2 border-emerald-400/30">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <div>
+                  <p className="text-emerald-300 text-sm font-bold mb-1">توريدات البلح نقداً</p>
+                  <p className="text-xs text-slate-300">(المصنع عليه للعميل)</p>
+                </div>
+                <p className="text-2xl md:text-3xl font-black text-emerald-400 break-all">
+                  {formatCurrency(totalCashPayments)}
+                </p>
+              </div>
+            </div>
+
+            {/* إجمالي ما للعميل */}
+            <div className="bg-cyan-500/20 rounded-xl p-4 border-2 border-cyan-400/30">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <div>
+                  <p className="text-cyan-300 text-sm font-bold mb-1">إجمالي ما للعميل</p>
+                  <p className="text-xs text-slate-300">(تمور + توريدات نقدية)</p>
+                </div>
+                <p className="text-2xl md:text-3xl font-black text-cyan-400 break-all">
                   {formatCurrency(totalSupplied)}
                 </p>
               </div>
             </div>
 
-            {/* السلف والمصروفات - عليه للمصنع */}
+            {/* السلف والمصروفات */}
             <div className="bg-red-500/20 rounded-xl p-4 border-2 border-red-400/30">
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                 <div>
-                  <p className="text-red-300 text-sm font-bold mb-1">إجمالي السلف والمصروفات</p>
-                  <p className="text-xs text-slate-300">(عليه للمصنع)</p>
+                  <p className="text-red-300 text-sm font-bold mb-1">السلف والمصروفات</p>
+                  <p className="text-xs text-slate-300">(العميل عليه للمصنع)</p>
                 </div>
-                <p className="text-3xl font-black text-red-400">{formatCurrency(totalReceived)}</p>
+                <p className="text-2xl md:text-3xl font-black text-red-400 break-all">
+                  {formatCurrency(totalAdvances)}
+                </p>
               </div>
             </div>
 
@@ -388,16 +437,14 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
             <div
               className={`rounded-xl p-4 border-2 ${totalFinanceBalance >= 0 ? 'bg-emerald-600 border-emerald-400' : 'bg-red-600 border-red-400'}`}
             >
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                 <div>
-                  <p className="text-sm font-bold mb-1 opacity-90">الرصيد المتبقي</p>
+                  <p className="text-sm font-bold mb-1 opacity-90">الرصيد النهائي</p>
                   <p className="text-xs opacity-75">
                     {totalFinanceBalance >= 0 ? 'المصنع عليه للزبون' : 'الزبون عليه للمصنع'}
                   </p>
                 </div>
-                <p
-                  className={`text-4xl font-black ${totalFinanceBalance >= 0 ? 'text-white' : 'text-white'}`}
-                >
+                <p className="text-3xl md:text-4xl font-black text-white break-all">
                   {formatCurrency(Math.abs(totalFinanceBalance))}
                 </p>
               </div>
@@ -412,6 +459,16 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
               <div className="bg-slate-700/50 rounded-lg p-2 text-center">
                 <p className="text-slate-400">إجمالي الوزن</p>
                 <p className="text-lg font-bold">{formatNumber(totalNetWeight)} كجم</p>
+              </div>
+              <div className="bg-slate-700/50 rounded-lg p-2 text-center">
+                <p className="text-slate-400">عدد عمليات الميزان</p>
+                <p className="text-lg font-bold">{accountSummary?.weighbridge_transaction_count || 0}</p>
+              </div>
+              <div className="bg-slate-700/50 rounded-lg p-2 text-center">
+                <p className="text-slate-400">إجمالي الصناديق</p>
+                <p className="text-lg font-bold">
+                  {accountSummary?.total_crates_out || 0} خارج / {accountSummary?.total_crates_returned || 0} عائد
+                </p>
               </div>
             </div>
           </div>

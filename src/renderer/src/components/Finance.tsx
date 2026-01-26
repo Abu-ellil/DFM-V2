@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useFinanceStore } from '../store/useFinanceStore'
 import { useCustomerStore } from '../store/useCustomerStore'
+import { useAppStore } from '../store/useAppStore'
 import { Card } from './ui/Card'
 import { Table } from './ui/Table'
 import {
@@ -29,6 +30,7 @@ export default function Finance() {
     isLoading
   } = useFinanceStore()
   const { customers, fetchCustomers } = useCustomerStore()
+  const { navigateToCustomer } = useAppStore()
   const [activeView, setActiveView] = useState<'summary' | 'history'>('summary')
   const [searchTerm, setSearchTerm] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -99,7 +101,20 @@ export default function Finance() {
   const filteredHistory = transactions.filter((t) => t.customer_name.includes(searchTerm))
 
   const summaryColumns = [
-    { header: 'العميل', accessor: 'customer_name' as const },
+    {
+      header: 'العميل',
+      accessor: (s: any) => (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            navigateToCustomer(s.customer_id)
+          }}
+          className="text-emerald-600 hover:underline font-medium text-right"
+        >
+          {s.customer_name}
+        </button>
+      )
+    },
     {
       header: 'إجمالي المقبوض',
       accessor: (s: any) => formatCurrency(s.total_received),
@@ -122,7 +137,20 @@ export default function Finance() {
 
   const historyColumns = [
     { header: 'التاريخ', accessor: (t: any) => new Date(t.date).toLocaleDateString('ar-EG') },
-    { header: 'العميل', accessor: 'customer_name' as const },
+    {
+      header: 'العميل',
+      accessor: (t: any) => (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            navigateToCustomer(t.customer_id)
+          }}
+          className="text-emerald-600 hover:underline font-medium text-right"
+        >
+          {t.customer_name}
+        </button>
+      )
+    },
     { header: 'النوع', accessor: 'transaction_type' as const },
     {
       header: 'مقبوض',
@@ -189,48 +217,48 @@ export default function Finance() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card className="bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/30">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-emerald-600 dark:text-emerald-400 text-sm font-bold mb-1">
+          <div className="flex justify-between items-center gap-4">
+            <div className="min-w-0">
+              <p className="text-emerald-600 dark:text-emerald-400 text-sm font-bold mb-1 truncate">
                 إجمالي المقبوضات
               </p>
-              <h3 className="text-2xl font-black text-emerald-700 dark:text-emerald-300">
+              <h3 className="text-xl lg:text-2xl font-black text-emerald-700 dark:text-emerald-300 break-all">
                 {formatCurrency(summary.reduce((acc, curr) => acc + curr.total_received, 0))}
               </h3>
             </div>
-            <div className="p-2 bg-emerald-100 dark:bg-emerald-800 rounded-lg text-emerald-600">
+            <div className="p-2 bg-emerald-100 dark:bg-emerald-800 rounded-lg text-emerald-600 shrink-0">
               <TrendingUp size={24} />
             </div>
           </div>
         </Card>
 
         <Card className="bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-red-600 dark:text-red-400 text-sm font-bold mb-1">
+          <div className="flex justify-between items-center gap-4">
+            <div className="min-w-0">
+              <p className="text-red-600 dark:text-red-400 text-sm font-bold mb-1 truncate">
                 إجمالي المدفوعات
               </p>
-              <h3 className="text-2xl font-black text-red-700 dark:text-red-300">
+              <h3 className="text-xl lg:text-2xl font-black text-red-700 dark:text-red-300 break-all">
                 {formatCurrency(summary.reduce((acc, curr) => acc + curr.total_paid, 0))}
               </h3>
             </div>
-            <div className="p-2 bg-red-100 dark:bg-red-800 rounded-lg text-red-600">
+            <div className="p-2 bg-red-100 dark:bg-red-800 rounded-lg text-red-600 shrink-0">
               <TrendingDown size={24} />
             </div>
           </div>
         </Card>
 
         <Card className="bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/30">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-blue-600 dark:text-blue-400 text-sm font-bold mb-1">صافي الرصيد</p>
-              <h3 className="text-2xl font-black text-blue-700 dark:text-blue-300">
+          <div className="flex justify-between items-center gap-4">
+            <div className="min-w-0">
+              <p className="text-blue-600 dark:text-blue-400 text-sm font-bold mb-1 truncate">صافي الرصيد</p>
+              <h3 className="text-xl lg:text-2xl font-black text-blue-700 dark:text-blue-300 break-all">
                 {formatCurrency(summary.reduce((acc, curr) => acc + curr.balance, 0))}
               </h3>
             </div>
-            <div className="p-2 bg-blue-100 dark:bg-blue-800 rounded-lg text-blue-600">
+            <div className="p-2 bg-blue-100 dark:bg-blue-800 rounded-lg text-blue-600 shrink-0">
               <Wallet size={24} />
             </div>
           </div>
@@ -286,13 +314,13 @@ export default function Finance() {
             </div>
 
             <form onSubmit={handleAddTransaction} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold text-slate-600 mb-1">التاريخ</label>
                   <input
                     type="date"
                     required
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2"
+                    className="w-full min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2"
                     value={newTransaction.date}
                     onChange={(e) => setNewTransaction({ ...newTransaction, date: e.target.value })}
                   />
@@ -301,7 +329,7 @@ export default function Finance() {
                   <label className="block text-sm font-bold text-slate-600 mb-1">العميل</label>
                   <select
                     required
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2"
+                    className="w-full min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2"
                     value={newTransaction.customer_id}
                     onChange={(e) =>
                       setNewTransaction({ ...newTransaction, customer_id: e.target.value })
@@ -410,13 +438,13 @@ export default function Finance() {
             </div>
 
             <form onSubmit={handleUpdateTransaction} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold text-slate-600 mb-1">التاريخ</label>
                   <input
                     type="date"
                     required
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2"
+                    className="w-full min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2"
                     value={editingTransaction.date}
                     onChange={(e) =>
                       setEditingTransaction({ ...editingTransaction, date: e.target.value })
@@ -427,7 +455,7 @@ export default function Finance() {
                   <label className="block text-sm font-bold text-slate-600 mb-1">العميل</label>
                   <select
                     required
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2"
+                    className="w-full min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2"
                     value={editingTransaction.customer_id}
                     onChange={(e) =>
                       setEditingTransaction({ ...editingTransaction, customer_id: e.target.value })

@@ -20,7 +20,7 @@ export function formatCurrency(
   const defaults: FormatOptions = {
     showCurrency: true,
     showSymbol: true, // Default to true for the v2 app as seen in screenshots
-    decimals: 2,
+    decimals: 0,
     useCommas: true,
     currencyText: 'ج.م'
   }
@@ -33,14 +33,14 @@ export function formatCurrency(
     amount === undefined ||
     (typeof amount === 'string' && isNaN(parseFloat(amount)))
   ) {
-    return opts.showCurrency ? `0.00 ${opts.currencyText}` : '0.00'
+    return opts.showCurrency ? `0 ${opts.currencyText}` : '0'
   }
 
   // Convert to number
   const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount
 
   if (isNaN(numAmount)) {
-    return opts.showCurrency ? `0.00 ${opts.currencyText}` : '0.00'
+    return opts.showCurrency ? `0 ${opts.currencyText}` : '0'
   }
 
   // Format with thousand separators and decimal places
@@ -64,18 +64,18 @@ export function formatCurrency(
 /**
  * Format a number with thousand separators only (no currency)
  */
-export function formatNumber(amount: number | string | null | undefined, decimals = 2): string {
+export function formatNumber(amount: number | string | null | undefined, decimals = 0): string {
   if (
     amount === null ||
     amount === undefined ||
     (typeof amount === 'string' && isNaN(parseFloat(amount)))
   ) {
-    return '0.00'
+    return '0'
   }
 
   const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount
 
-  if (isNaN(numAmount)) return '0.00'
+  if (isNaN(numAmount)) return '0'
 
   return numAmount.toLocaleString('en-US', {
     minimumFractionDigits: decimals,

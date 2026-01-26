@@ -395,6 +395,9 @@ ipcMain.handle('weighbridge:create', async (_event, data) => {
       client_timestamp: Date.now()
     }).catch((err) => console.error('Failed to enqueue change:', err))
 
+    // Send customer account update notification
+    mainWindow?.webContents.send('customerAccounts:updated', { customerId: data.customer_id })
+
     return { success: true }
   } catch (error) {
     console.error('Create weighbridge error:', error)
@@ -485,6 +488,9 @@ ipcMain.handle('crates:create', async (_event, data) => {
       client_timestamp: Date.now()
     }).catch((err) => console.error('Failed to enqueue change:', err))
 
+    // Send customer account update notification
+    mainWindow?.webContents.send('customerAccounts:updated', { customerId: data.customer_id })
+
     return { success: true }
   } catch (error) {
     console.error('Create crate transaction error:', error)
@@ -523,6 +529,9 @@ ipcMain.handle('crates:update', async (_event, id, data) => {
       client_timestamp: Date.now()
     }).catch((err) => console.error('Failed to enqueue change:', err))
 
+    // Send customer account update notification
+    mainWindow?.webContents.send('customerAccounts:updated', { customerId: data.customer_id })
+
     return { success: true }
   } catch (error) {
     console.error('Update crate transaction error:', error)
@@ -533,6 +542,16 @@ ipcMain.handle('crates:update', async (_event, id, data) => {
 ipcMain.handle('crates:delete', async (_event, id) => {
   try {
     const db = getDb()
+
+    // Get customer_id before deleting
+    const getStmt = db.prepare('SELECT customer_id FROM crates WHERE id = ?')
+    getStmt.bind([id])
+    let customerId: number | null = null
+    if (getStmt.step()) {
+      customerId = getStmt.getAsObject().customer_id as number
+    }
+    getStmt.free()
+
     const stmt = db.prepare('DELETE FROM crates WHERE id = ?')
     stmt.bind([id])
     stmt.run()
@@ -547,6 +566,11 @@ ipcMain.handle('crates:delete', async (_event, id) => {
       data: { id },
       client_timestamp: Date.now()
     }).catch((err) => console.error('Failed to enqueue change:', err))
+
+    // Send customer account update notification
+    if (customerId) {
+      mainWindow?.webContents.send('customerAccounts:updated', { customerId })
+    }
 
     return { success: true }
   } catch (error) {
@@ -635,6 +659,9 @@ ipcMain.handle('finance:create', async (_event, data) => {
       client_timestamp: Date.now()
     }).catch((err) => console.error('Failed to enqueue change:', err))
 
+    // Send customer account update notification
+    mainWindow?.webContents.send('customerAccounts:updated', { customerId: data.customer_id })
+
     return { success: true }
   } catch (error) {
     console.error('Create finance transaction error:', error)
@@ -672,6 +699,9 @@ ipcMain.handle('finance:update', async (_event, id, data) => {
       client_timestamp: Date.now()
     }).catch((err) => console.error('Failed to enqueue change:', err))
 
+    // Send customer account update notification
+    mainWindow?.webContents.send('customerAccounts:updated', { customerId: data.customer_id })
+
     return { success: true }
   } catch (error) {
     console.error('Update finance transaction error:', error)
@@ -682,6 +712,16 @@ ipcMain.handle('finance:update', async (_event, id, data) => {
 ipcMain.handle('finance:delete', async (_event, id) => {
   try {
     const db = getDb()
+
+    // Get customer_id before deleting
+    const getStmt = db.prepare('SELECT customer_id FROM finance WHERE id = ?')
+    getStmt.bind([id])
+    let customerId: number | null = null
+    if (getStmt.step()) {
+      customerId = getStmt.getAsObject().customer_id as number
+    }
+    getStmt.free()
+
     const stmt = db.prepare('DELETE FROM finance WHERE id = ?')
     stmt.bind([id])
     stmt.run()
@@ -697,10 +737,196 @@ ipcMain.handle('finance:delete', async (_event, id) => {
       client_timestamp: Date.now()
     }).catch((err) => console.error('Failed to enqueue change:', err))
 
+    // Send customer account update notification
+    if (customerId) {
+      mainWindow?.webContents.send('customerAccounts:updated', { customerId })
+    }
+
     return { success: true }
   } catch (error) {
     console.error('Delete finance transaction error:', error)
     return { success: false, message: 'حدث خطأ أثناء حذف العملية المالية' }
+  }
+})
+
+// Customer Accounts IPC
+ipcMain.handle('customerAccounts:getSummary', async (_event, customerId?) => {
+  try {
+    const db = getDb()
+
+    // For a single customer, return detailed summary
+    if (customerId) {
+      const stmt = db.prepare(`
+        SELECT
+          c.id as customer_id,
+          c.name as customer_name,
+          c.type,
+          c.phone,
+          COALESCE((SELECT SUM(total) FROM weighbridge WHERE customer_id = c.id), 0) as total_weighbridge_debt,
+          (SELECT COUNT(*) FROM weighbridge WHERE customer_id = c.id) as weighbridge_transaction_count,
+          COALESCE((SELECT SUM(net_weight) FROM weighbridge WHERE customer_id = c.id), 0) as total_net_weight,
+          COALESCE((SELECT SUM(amount_paid) FROM finance WHERE customer_id = c.id), 0) as total_paid,
+          COALESCE((SELECT SUM(amount_received) FROM finance WHERE customer_id = c.id), 0) as total_received,
+          COALESCE((SELECT SUM(crates_out) FROM crates WHERE customer_id = c.id), 0) as total_crates_out,
+          COALESCE((SELECT SUM(crates_returned) FROM crates WHERE customer_id = c.id), 0) as total_crates_returned,
+          (
+            COALESCE((SELECT SUM(amount_paid) FROM finance WHERE customer_id = c.id), 0) +
+            COALESCE((SELECT SUM(total) FROM weighbridge WHERE customer_id = c.id), 0) -
+            COALESCE((SELECT SUM(amount_received) FROM finance WHERE customer_id = c.id), 0)
+          ) as net_balance,
+          (
+            COALESCE((SELECT SUM(crates_out) FROM crates WHERE customer_id = c.id), 0) -
+            COALESCE((SELECT SUM(crates_returned) FROM crates WHERE customer_id = c.id), 0)
+          ) as crate_balance
+        FROM customers c
+        WHERE c.id = ?
+      `)
+      stmt.bind([customerId])
+      const result = stmt.getAsObject() as any
+      stmt.free()
+
+      // Convert numbers from strings to actual numbers
+      if (result) {
+        result.total_weighbridge_debt = Number(result.total_weighbridge_debt) || 0
+        result.weighbridge_transaction_count = Number(result.weighbridge_transaction_count) || 0
+        result.total_net_weight = Number(result.total_net_weight) || 0
+        result.total_paid = Number(result.total_paid) || 0
+        result.total_received = Number(result.total_received) || 0
+        result.total_crates_out = Number(result.total_crates_out) || 0
+        result.total_crates_returned = Number(result.total_crates_returned) || 0
+        result.net_balance = Number(result.net_balance) || 0
+        result.crate_balance = Number(result.crate_balance) || 0
+      }
+
+      return result
+    }
+
+    // For all customers
+    const res = db.exec(`
+      SELECT
+        c.id as customer_id,
+        c.name as customer_name,
+        c.type,
+        c.phone,
+        COALESCE((SELECT SUM(total) FROM weighbridge WHERE customer_id = c.id), 0) as total_weighbridge_debt,
+        (SELECT COUNT(*) FROM weighbridge WHERE customer_id = c.id) as weighbridge_transaction_count,
+        COALESCE((SELECT SUM(net_weight) FROM weighbridge WHERE customer_id = c.id), 0) as total_net_weight,
+        COALESCE((SELECT SUM(amount_paid) FROM finance WHERE customer_id = c.id), 0) as total_paid,
+        COALESCE((SELECT SUM(amount_received) FROM finance WHERE customer_id = c.id), 0) as total_received,
+        COALESCE((SELECT SUM(crates_out) FROM crates WHERE customer_id = c.id), 0) as total_crates_out,
+        COALESCE((SELECT SUM(crates_returned) FROM crates WHERE customer_id = c.id), 0) as total_crates_returned,
+        (
+          COALESCE((SELECT SUM(amount_paid) FROM finance WHERE customer_id = c.id), 0) +
+          COALESCE((SELECT SUM(total) FROM weighbridge WHERE customer_id = c.id), 0) -
+          COALESCE((SELECT SUM(amount_received) FROM finance WHERE customer_id = c.id), 0)
+        ) as net_balance,
+        (
+          COALESCE((SELECT SUM(crates_out) FROM crates WHERE customer_id = c.id), 0) -
+          COALESCE((SELECT SUM(crates_returned) FROM crates WHERE customer_id = c.id), 0)
+        ) as crate_balance
+      FROM customers c
+      ORDER BY c.name ASC
+    `)
+
+    if (res.length === 0) return []
+
+    const columns = res[0].columns
+    return res[0].values.map((row) => {
+      const obj: any = {}
+      columns.forEach((col, i) => {
+        // Convert numeric strings to numbers
+        const value = row[i]
+        if (
+          [
+            'total_weighbridge_debt',
+            'weighbridge_transaction_count',
+            'total_net_weight',
+            'total_paid',
+            'total_received',
+            'total_crates_out',
+            'total_crates_returned',
+            'net_balance',
+            'crate_balance'
+          ].includes(col)
+        ) {
+          obj[col] = Number(value) || 0
+        } else {
+          obj[col] = value
+        }
+      })
+      return obj
+    })
+  } catch (error) {
+    console.error('Get customer accounts summary error:', error)
+    return customerId ? null : []
+  }
+})
+
+ipcMain.handle('customerAccounts:getRecentTransactions', async (_event, customerId: number, limit: number = 20) => {
+  try {
+    const db = getDb()
+    const transactions: any[] = []
+
+    // Get weighbridge transactions
+    const weighbridgeStmt = db.prepare(`
+      SELECT 'weighbridge' as type, id, date, customer_id, total as amount, notes, created_at
+      FROM weighbridge
+      WHERE customer_id = ?
+      ORDER BY date DESC, id DESC
+      LIMIT ?
+    `)
+    weighbridgeStmt.bind([customerId, limit])
+    while (weighbridgeStmt.step()) {
+      transactions.push(weighbridgeStmt.getAsObject())
+    }
+    weighbridgeStmt.free()
+
+    // Get finance transactions
+    const financeStmt = db.prepare(`
+      SELECT 'finance' as type, id, date, customer_id,
+             CASE
+               WHEN amount_paid > 0 THEN amount_paid
+               ELSE -amount_received
+             END as amount,
+             transaction_type as notes, created_at
+      FROM finance
+      WHERE customer_id = ?
+      ORDER BY date DESC, id DESC
+      LIMIT ?
+    `)
+    financeStmt.bind([customerId, limit])
+    while (financeStmt.step()) {
+      transactions.push(financeStmt.getAsObject())
+    }
+    financeStmt.free()
+
+    // Get crates transactions
+    const cratesStmt = db.prepare(`
+      SELECT 'crates' as type, id, date, customer_id,
+             (crates_out - crates_returned) as amount,
+             handler || ' - ' || notes as notes, created_at
+      FROM crates
+      WHERE customer_id = ?
+      ORDER BY date DESC, id DESC
+      LIMIT ?
+    `)
+    cratesStmt.bind([customerId, limit])
+    while (cratesStmt.step()) {
+      transactions.push(cratesStmt.getAsObject())
+    }
+    cratesStmt.free()
+
+    // Sort all by date descending
+    transactions.sort((a, b) => {
+      const dateCompare = new Date(b.date).getTime() - new Date(a.date).getTime()
+      if (dateCompare !== 0) return dateCompare
+      return b.id - a.id
+    })
+
+    return transactions.slice(0, limit)
+  } catch (error) {
+    console.error('Get recent transactions error:', error)
+    return []
   }
 })
 
@@ -983,6 +1209,13 @@ ipcMain.handle('settings:importExcel', async () => {
 
       await saveDatabase()
       console.log(`Main: Successfully imported ${importedCount} customers`)
+
+      // Send bulk update notification
+      mainWindow?.webContents.send('customerAccounts:bulkUpdate', {
+        count: importedCount,
+        timestamp: Date.now()
+      })
+
       return { success: true, message: `تم استيراد ${importedCount} عميل بنجاح` }
     }
     console.log('Main: Import cancelled by user')

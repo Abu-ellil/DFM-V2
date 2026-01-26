@@ -14,6 +14,7 @@ import { useCustomerStore } from '../store/useCustomerStore'
 import { useWeighbridgeStore } from '../store/useWeighbridgeStore'
 import { useCrateStore } from '../store/useCrateStore'
 import { useFinanceStore } from '../store/useFinanceStore'
+import { useAppStore } from '../store/useAppStore'
 import { formatCurrency, formatNumber } from '../utils/format'
 
 const RECENT_ITEMS_LIMIT = 5
@@ -23,6 +24,7 @@ export default function Dashboard() {
   const { transactions: weighbridge, fetchTransactions: fetchWeighbridge } = useWeighbridgeStore()
   const { summary: crates, transactions: crateTransactions, fetchCrates } = useCrateStore()
   const { transactions: finance, fetchFinance } = useFinanceStore()
+  const { navigateToCustomer } = useAppStore()
 
   useEffect(() => {
     fetchCustomers()
@@ -80,22 +82,34 @@ export default function Dashboard() {
   const crateTrend = calculateTrend(currentCrateBalance, previousCrateBalance)
 
   // 4. Finance Trend (Net balance change)
-  const currentFinanceNet = finance
-    .filter((t) => new Date(t.date) >= thirtyDaysAgo)
-    .reduce((acc, curr) => acc + (curr.amount_received - curr.amount_paid), 0)
-  const previousFinanceNet = finance
-    .filter((t) => {
-      const d = new Date(t.date)
-      return d >= sixtyDaysAgo && d < thirtyDaysAgo
-    })
-    .reduce((acc, curr) => acc + (curr.amount_received - curr.amount_paid), 0)
+  const currentFinanceNet =
+    finance
+      .filter((t) => new Date(t.date) >= thirtyDaysAgo)
+      .reduce((acc, curr) => acc + (curr.amount_received - curr.amount_paid), 0) -
+    weighbridge
+      .filter((t) => new Date(t.date) >= thirtyDaysAgo)
+      .reduce((acc, curr) => acc + curr.total, 0)
+
+  const previousFinanceNet =
+    finance
+      .filter((t) => {
+        const d = new Date(t.date)
+        return d >= sixtyDaysAgo && d < thirtyDaysAgo
+      })
+      .reduce((acc, curr) => acc + (curr.amount_received - curr.amount_paid), 0) -
+    weighbridge
+      .filter((t) => {
+        const d = new Date(t.date)
+        return d >= sixtyDaysAgo && d < thirtyDaysAgo
+      })
+      .reduce((acc, curr) => acc + curr.total, 0)
+
   const financeTrend = calculateTrend(currentFinanceNet, previousFinanceNet)
 
   const totalCrates = crates.reduce((acc, curr) => acc + curr.balance, 0)
-  const totalBalance = finance.reduce(
-    (acc, curr) => acc + (curr.amount_received - curr.amount_paid),
-    0
-  )
+  const totalBalance =
+    finance.reduce((acc, curr) => acc + (curr.amount_received - curr.amount_paid), 0) -
+    weighbridge.reduce((acc, curr) => acc + curr.total, 0)
   const totalWeight = weighbridge.reduce((acc, curr) => acc + curr.net_weight, 0)
 
   const stats = [
@@ -155,20 +169,24 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, i) => (
           <Card key={i} className="group hover:scale-[1.02] transition-transform duration-300">
-            <div className="flex justify-between items-start mb-4">
-              <div className={`${stat.color} p-3 rounded-2xl`}>{stat.icon}</div>
+            <div className="flex justify-between items-start mb-4 gap-2">
+              <div className={`${stat.color} p-3 rounded-2xl shrink-0`}>{stat.icon}</div>
               <div
-                className={`flex items-center gap-1 text-sm font-bold ${stat.trendUp ? 'text-emerald-600' : 'text-rose-600'}`}
+                className={`flex items-center gap-1 text-sm font-bold shrink-0 ${stat.trendUp ? 'text-emerald-600' : 'text-rose-600'}`}
               >
                 {stat.trend}
                 {stat.trendUp ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
               </div>
             </div>
-            <h3 className="text-slate-500 dark:text-slate-400 font-bold mb-1">{stat.title}</h3>
-            <p className="text-2xl font-black text-slate-800 dark:text-white">{stat.value}</p>
+            <h3 className="text-slate-500 dark:text-slate-400 font-bold mb-1 truncate" title={stat.title}>
+              {stat.title}
+            </h3>
+            <p className="text-xl md:text-2xl font-black text-slate-800 dark:text-white break-words">
+              {stat.value}
+            </p>
           </Card>
         ))}
       </div>
@@ -193,7 +211,12 @@ export default function Dashboard() {
                     <Scale size={20} className="text-slate-600 dark:text-slate-300" />
                   </div>
                   <div>
-                    <p className="font-bold text-slate-800 dark:text-white">{t.customer_name}</p>
+                    <button
+                      onClick={() => navigateToCustomer(t.customer_id)}
+                      className="font-bold text-slate-800 dark:text-white hover:text-emerald-600 hover:underline text-right block"
+                    >
+                      {t.customer_name}
+                    </button>
                     <p className="text-xs text-slate-500">{t.date}</p>
                   </div>
                 </div>
@@ -230,7 +253,12 @@ export default function Dashboard() {
                     />
                   </div>
                   <div>
-                    <p className="font-bold text-slate-800 dark:text-white">{t.customer_name}</p>
+                    <button
+                      onClick={() => navigateToCustomer(t.customer_id)}
+                      className="font-bold text-slate-800 dark:text-white hover:text-emerald-600 hover:underline text-right block"
+                    >
+                      {t.customer_name}
+                    </button>
                     <p className="text-xs text-slate-500">{t.date}</p>
                   </div>
                 </div>
