@@ -1,6 +1,6 @@
-import { NextRequest } from 'next/server'
-import { withLicenseAuth } from '../lib/auth'
-import { createNeonConnection } from '../lib/neon'
+import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { withLicenseAuth } from '../../src/lib/auth.js'
+import { createNeonConnection } from '../../src/lib/neon.js'
 
 /**
  * POST /api/sync/database-info
@@ -21,12 +21,7 @@ import { createNeonConnection } from '../lib/neon'
  *   syncStatus: 'connected' | 'disconnected' | 'error'
  * }
  */
-export const config = {
-  runtime: 'edge',
-  maxDuration: 10
-}
-
-export default withLicenseAuth(async (request: NextRequest, factory) => {
+export default withLicenseAuth(async (request: VercelRequest, response: VercelResponse, factory) => {
   try {
     // Connect to factory's Neon database
     const sql = createNeonConnection(factory.databaseUrl)
@@ -54,38 +49,25 @@ export default withLicenseAuth(async (request: NextRequest, factory) => {
     }
 
     // Return success response
-    return new Response(
-      JSON.stringify({
+    return response.status(200)
+      .setHeader('Cache-Control', 'no-store, max-age=0')
+      .json({
         success: true,
         machineId: factory.machineId,
         databaseName: factory.databaseName,
         lastSync,
         syncStatus
-      }),
-      {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-store, max-age=0'
-        }
-      }
-    )
+      })
   } catch (error: any) {
     console.error('Database info error:', error)
 
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: error.message || 'Failed to get database info',
-        machineId: factory.machineId,
-        databaseName: factory.databaseName,
-        lastSync: null,
-        syncStatus: 'error'
-      }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      }
-    )
+    return response.status(500).json({
+      success: false,
+      error: error.message || 'Failed to get database info',
+      machineId: factory.machineId,
+      databaseName: factory.databaseName,
+      lastSync: null,
+      syncStatus: 'error'
+    })
   }
 })

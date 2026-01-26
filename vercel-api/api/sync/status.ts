@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 /**
  * GET /api/sync/status
@@ -12,37 +12,24 @@ import { NextResponse } from 'next/server'
  *   version: string
  * }
  */
-export const config = {
-  runtime: 'edge',
-  maxDuration: 10
-}
+export default async function handler(request: VercelRequest, response: VercelResponse) {
+  // Only allow GET requests
+  if (request.method !== 'GET') {
+    return response.status(405).json({ error: 'Method not allowed' })
+  }
 
-export async function GET() {
   try {
-    return NextResponse.json(
-      {
-        status: 'ok',
-        timestamp: new Date().toISOString(),
-        version: '1.0.0',
-        service: 'dates-factory-manager-sync-api'
-      },
-      {
-        status: 200,
-        headers: {
-          'Cache-Control': 'no-store, max-age=0'
-        }
-      }
-    )
+    return response.status(200).json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      version: '1.0.0',
+      service: 'dates-factory-manager-sync-api'
+    })
   } catch (error: any) {
-    return NextResponse.json(
-      {
-        status: 'error',
-        timestamp: new Date().toISOString(),
-        error: error.message
-      },
-      {
-        status: 500
-      }
-    )
+    return response.status(500).json({
+      status: 'error',
+      timestamp: new Date().toISOString(),
+      error: error.message
+    })
   }
 }

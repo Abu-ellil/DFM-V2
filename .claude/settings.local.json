@@ -32,7 +32,8 @@
       "WebSearch",
       "Bash(sqlite3:*)",
       "Bash(npx tsc:*)",
-      "Bash(vercel:*)"
+      "Bash(vercel:*)",
+      "Bash(curl:*)"
     ]
   }
 }

@@ -2,15 +2,8 @@
   "buildCommand": "echo 'No build needed'",
   "outputDirectory": "./",
   "framework": null,
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "/api/:path*"
-    }
-  ],
   "functions": {
     "api/**/*.ts": {
-      "runtime": "nodejs20.x",
       "memory": 1024,
       "maxDuration": 10
     }

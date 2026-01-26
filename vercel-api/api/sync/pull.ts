@@ -1,6 +1,6 @@
-import { NextRequest } from 'next/server'
-import { withLicenseAuth } from '../lib/auth'
-import { createNeonConnection, getChangesSince } from '../lib/neon'
+import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { withLicenseAuth } from '../../src/lib/auth.js'
+import { createNeonConnection, getChangesSince } from '../../src/lib/neon.js'
 
 /**
  * POST /api/sync/pull
@@ -25,28 +25,17 @@ import { createNeonConnection, getChangesSince } from '../lib/neon'
  *   checkpoint: number
  * }
  */
-export const config = {
-  runtime: 'edge',
-  maxDuration: 10
-}
-
-export default withLicenseAuth(async (request: NextRequest, factory) => {
+export default withLicenseAuth(async (request: VercelRequest, response: VercelResponse, factory) => {
   try {
     // Parse request body
-    const body = await request.json()
+    const body = request.body
     const { last_sync_checkpoint } = body
 
     if (typeof last_sync_checkpoint !== 'number') {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Invalid checkpoint format'
-        }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        }
-      )
+      return response.status(400).json({
+        success: false,
+        error: 'Invalid checkpoint format'
+      })
     }
 
     // Connect to factory's Neon database
@@ -72,34 +61,21 @@ export default withLicenseAuth(async (request: NextRequest, factory) => {
     const checkpoint = Date.now()
 
     // Return success response
-    return new Response(
-      JSON.stringify({
+    return response.status(200)
+      .setHeader('Cache-Control', 'no-store')
+      .json({
         success: true,
         changes,
         checkpoint
-      }),
-      {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-store'
-        }
-      }
-    )
+      })
   } catch (error: any) {
     console.error('Pull error:', error)
 
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: error.message || 'Internal server error',
-        changes: [],
-        checkpoint: 0
-      }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      }
-    )
+    return response.status(500).json({
+      success: false,
+      error: error.message || 'Internal server error',
+      changes: [],
+      checkpoint: 0
+    })
   }
 })

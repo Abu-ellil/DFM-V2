@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server'
+import type { VercelRequest } from '@vercel/node'
 
 /**
  * License validation result
@@ -16,9 +16,9 @@ export interface FactoryInfo {
  * This middleware extracts the license key from the Authorization header
  * and maps it to the factory's Neon database
  */
-export async function validateLicense(request: NextRequest): Promise<FactoryInfo> {
+export async function validateLicense(request: VercelRequest): Promise<FactoryInfo> {
   // Get license key from Authorization header
-  const authHeader = request.headers.get('authorization')
+  const authHeader = request.headers['authorization']
   if (!authHeader) {
     throw new Error('Missing Authorization header')
   }
@@ -113,44 +113,34 @@ function constructNeonUrl(machineId: string): string {
 }
 
 /**
- * Middleware function for Vercel Edge functions
+ * Middleware function for Vercel serverless functions
  * Validates license and adds factory info to request context
  */
-export function withLicenseAuth(handler: (request: NextRequest, factory: FactoryInfo) => Promise<Response>) {
-  return async (request: NextRequest): Promise<Response> => {
+export function withLicenseAuth(
+  handler: (request: VercelRequest, response: any, factory: FactoryInfo) => Promise<any>
+) {
+  return async (request: VercelRequest, response: any): Promise<any> => {
     try {
       // Validate license
       const factory = await validateLicense(request)
 
       // Call the actual handler with factory info
-      return await handler(request, factory)
+      return await handler(request, response, factory)
     } catch (error: any) {
       console.error('License validation error:', error)
 
       // Return appropriate error response
       if (error.message.includes('Missing') || error.message.includes('Invalid')) {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: error.message
-          }),
-          {
-            status: 401,
-            headers: { 'Content-Type': 'application/json' }
-          }
-        )
+        return response.status(401).json({
+          success: false,
+          error: error.message
+        })
       }
 
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'License validation failed'
-        }),
-        {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' }
-        }
-      )
+      return response.status(500).json({
+        success: false,
+        error: 'License validation failed'
+      })
     }
   }
 }

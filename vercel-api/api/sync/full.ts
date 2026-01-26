@@ -1,6 +1,6 @@
-import { NextRequest } from 'next/server'
-import { withLicenseAuth } from '../lib/auth'
-import { createNeonConnection, applyChange, getChangesSince } from '../lib/neon'
+import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { withLicenseAuth } from '../../src/lib/auth.js'
+import { createNeonConnection, applyChange, getChangesSince } from '../../src/lib/neon.js'
 
 /**
  * POST /api/sync/full
@@ -25,41 +25,24 @@ import { createNeonConnection, applyChange, getChangesSince } from '../lib/neon'
  *   new_checkpoint: number
  * }
  */
-export const config = {
-  runtime: 'edge',
-  maxDuration: 10
-}
-
-export default withLicenseAuth(async (request: NextRequest, factory) => {
+export default withLicenseAuth(async (request: VercelRequest, response: VercelResponse, factory) => {
   try {
     // Parse request body
-    const body = await request.json()
+    const body = request.body
     const { changes, last_sync_checkpoint } = body
 
     if (!Array.isArray(changes)) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Invalid changes format'
-        }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        }
-      )
+      return response.status(400).json({
+        success: false,
+        error: 'Invalid changes format'
+      })
     }
 
     if (typeof last_sync_checkpoint !== 'number') {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Invalid checkpoint format'
-        }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        }
-      )
+      return response.status(400).json({
+        success: false,
+        error: 'Invalid checkpoint format'
+      })
     }
 
     // Connect to factory's Neon database
@@ -118,39 +101,26 @@ export default withLicenseAuth(async (request: NextRequest, factory) => {
     const newCheckpoint = Date.now()
 
     // Return success response
-    return new Response(
-      JSON.stringify({
+    return response.status(200)
+      .setHeader('Cache-Control', 'no-store')
+      .json({
         success: true,
         processed,
         failed,
         remote_changes: remoteChanges,
         new_checkpoint: newCheckpoint,
         errors: errors.length > 0 ? errors : undefined
-      }),
-      {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-store'
-        }
-      }
-    )
+      })
   } catch (error: any) {
     console.error('Full sync error:', error)
 
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: error.message || 'Internal server error',
-        processed: 0,
-        failed: 0,
-        remote_changes: [],
-        new_checkpoint: 0
-      }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      }
-    )
+    return response.status(500).json({
+      success: false,
+      error: error.message || 'Internal server error',
+      processed: 0,
+      failed: 0,
+      remote_changes: [],
+      new_checkpoint: 0
+    })
   }
 })
