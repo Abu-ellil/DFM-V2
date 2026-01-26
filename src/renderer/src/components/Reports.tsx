@@ -209,8 +209,8 @@ export default function Reports() {
     }
   }
 
-  const handlePrint = async () => {
-    await window.api.print()
+  const handlePrint = () => {
+    window.print()
   }
 
   const handleExportExcel = async () => {
@@ -236,7 +236,9 @@ export default function Reports() {
         data: dataToExport.map((item) => {
           const row = {}
           columnsToExport.forEach((col) => {
-            if (typeof col.accessor === 'function') {
+            if (col.header === 'العميل') {
+              row[col.header] = item.customer_name
+            } else if (typeof col.accessor === 'function') {
               row[col.header] = col.accessor(item)
             } else {
               row[col.header] = item[col.accessor as string]

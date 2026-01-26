@@ -211,18 +211,18 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
     }
   ]
 
-  const handlePrintSingle = async (type: string, transaction: any) => {
+  const handlePrintSingle = (type: string, transaction: any) => {
     setPrintingTransaction({ type, data: transaction })
-    setTimeout(async () => {
-      await window.api.print()
+    setTimeout(() => {
+      window.print()
       setPrintingTransaction(null)
     }, 100)
   }
 
-  const handlePrintAll = async () => {
+  const handlePrintAll = () => {
     setPrintingTransaction(null)
-    setTimeout(async () => {
-      await window.api.print()
+    setTimeout(() => {
+      window.print()
     }, 100)
   }
 

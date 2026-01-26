@@ -29,17 +29,59 @@ body {
 @media print {
   @page {
     margin: 10mm;
-    size: auto;
+    size: A4;
   }
-  
+
   body {
     background-color: white !important;
     color: black !important;
     font-size: 12pt;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
+  /* Hide all elements by default when printing */
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+
+  /* Hide non-printable elements */
+  .no-print,
+  .print\\:hidden,
+  button:not(.print-visible),
+  input:not(.print-visible),
+  select:not(.print-visible),
+  textarea:not(.print-visible) {
+    display: none !important;
+  }
+
+  /* Show printable elements */
+  .print\\:block,
+  .print\\:flex {
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  .print\\:flex {
+    display: flex !important;
+  }
+
+  /* Ensure colors and backgrounds are printed */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Remove shadows and rounded corners for print */
+  * {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  /* Ensure text is black on white */
+  body {
+    color: #000 !important;
+    background: #fff !important;
   }
 }

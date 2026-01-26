@@ -1552,19 +1552,47 @@ ipcMain.handle('sync:clearOldConflicts', async (_event, olderThanDays) => {
   }
 })
 
-// Print IPC Handler
+// Print IPC Handler - Open print preview dialog
 ipcMain.handle('app:print', async () => {
   try {
     if (!mainWindow) {
       return { success: false, message: 'No window available' }
     }
 
-    // Use the built-in print functionality
-    mainWindow.webContents.print({
-      silent: false,
-      printBackground: true,
-      color: true
-    })
+    // Execute print in the renderer process
+    await mainWindow.webContents.executeJavaScript(`
+      // Add print styles before printing
+      const printStyle = document.createElement('style');
+      printStyle.textContent = \`
+        @media print {
+          body * { visibility: hidden; }
+          .print\\:block, .print\\:flex, .print\\:hidden { visibility: visible !important; }
+          .print\\:block { display: block !important; }
+          .print\\:flex { display: flex !important; }
+          .no-print { display: none !important; }
+
+          /* Show only printable content */
+          #root > div > *:not(:has(.print\\\\:block)) { display: none; }
+
+          /* Make sure print elements are visible */
+          .print\\\\:block, .print\\\\:flex {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+        }
+      \`;
+      document.head.appendChild(printStyle);
+
+      // Trigger print
+      window.print();
+
+      // Remove style after print dialog closes
+      setTimeout(() => {
+        document.head.removeChild(printStyle);
+      }, 1000);
+    `)
 
     return { success: true }
   } catch (error: any) {
