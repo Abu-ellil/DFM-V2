@@ -98,8 +98,10 @@ const api = {
     enable: () => ipcRenderer.invoke('sync:enable'),
     disable: () => ipcRenderer.invoke('sync:disable'),
     getConflicts: (limit?: number) => ipcRenderer.invoke('sync:getConflicts', limit),
-    clearOldConflicts: (olderThanDays?: number) => ipcRenderer.invoke('sync:clearOldConflicts', olderThanDays)
-  }
+    clearOldConflicts: (olderThanDays?: number) =>
+      ipcRenderer.invoke('sync:clearOldConflicts', olderThanDays)
+  },
+  print: () => ipcRenderer.invoke('app:print')
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

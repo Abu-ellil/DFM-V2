@@ -59,7 +59,8 @@ async function createWindow(): Promise<void> {
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: false,
+      plugins: true
     }
   })
 
@@ -430,6 +431,7 @@ ipcMain.handle('crates:getSummary', async () => {
     const db = getDb()
     const res = db.exec(`
       SELECT 
+        cr.customer_id,
         c.name as customer_name,
         SUM(cr.crates_out) as total_out,
         SUM(cr.crates_returned) as total_returned,
@@ -581,6 +583,7 @@ ipcMain.handle('finance:getSummary', async () => {
     const db = getDb()
     const res = db.exec(`
       SELECT 
+        f.customer_id,
         c.name as customer_name,
         SUM(f.amount_paid) as total_paid,
         SUM(f.amount_received) as total_received,
@@ -702,6 +705,34 @@ ipcMain.handle('finance:delete', async (_event, id) => {
 })
 
 // Security IPC
+ipcMain.handle('auth:setWebPassword', async (_event, { phone, password }) => {
+  try {
+    const { updateWebPassword } = require('./web-auth')
+    const result = await updateWebPassword({ phone, newPassword: password })
+
+    if (result.success) {
+      return { success: true, message: 'تم تحديث كلمة مرور الويب بنجاح' }
+    } else {
+      return { success: false, message: result.error || 'فشل تحديث كلمة المرور' }
+    }
+  } catch (error: any) {
+    console.error('Set web password error:', error)
+    return { success: false, message: 'حدث خطأ أثناء تحديث كلمة المرور' }
+  }
+})
+
+ipcMain.handle('auth:getWebUserStatus', async () => {
+  try {
+    const { isWebUserRegistered, getWebUser } = require('./web-auth')
+    const registered = isWebUserRegistered()
+    const user = getWebUser()
+    return { success: true, registered, user }
+  } catch (error: any) {
+    console.error('Get web user status error:', error)
+    return { success: false, registered: false }
+  }
+})
+
 ipcMain.handle('auth:changePassword', async (_event, { oldPassword, newPassword }) => {
   try {
     const db = getDb()
@@ -1518,6 +1549,27 @@ ipcMain.handle('sync:clearOldConflicts', async (_event, olderThanDays) => {
   } catch (error: any) {
     console.error('Clear conflicts error:', error)
     return { success: false, message: error.message || 'Failed to clear conflicts' }
+  }
+})
+
+// Print IPC Handler
+ipcMain.handle('app:print', async () => {
+  try {
+    if (!mainWindow) {
+      return { success: false, message: 'No window available' }
+    }
+
+    // Use the built-in print functionality
+    mainWindow.webContents.print({
+      silent: false,
+      printBackground: true,
+      color: true
+    })
+
+    return { success: true }
+  } catch (error: any) {
+    console.error('Print error:', error)
+    return { success: false, message: error.message || 'Failed to print' }
   }
 })
 

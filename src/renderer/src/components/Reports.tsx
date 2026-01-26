@@ -209,8 +209,8 @@ export default function Reports() {
     }
   }
 
-  const handlePrint = () => {
-    window.print()
+  const handlePrint = async () => {
+    await window.api.print()
   }
 
   const handleExportExcel = async () => {

@@ -135,6 +135,7 @@ declare global {
         getConflicts: (limit?: number) => Promise<{ success: boolean; data: any[] }>
         clearOldConflicts: (olderThanDays?: number) => Promise<{ success: boolean; data: { cleared: number } }>
       }
+      print: () => Promise<{ success: boolean; message?: string }>
     }
   }
 }
