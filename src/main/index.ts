@@ -5,7 +5,7 @@ import { join } from 'path'
 import { writeFile, readFile } from 'fs/promises'
 import * as XLSX from 'xlsx'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import icon from '../../resources/icon.png?asset'
+import icon from '../../resources/icon.ico?asset'
 import { initializeDatabase, getDb, saveDatabase, getDbPath } from './db'
 import { enqueueChange } from './sync/queue'
 import bcrypt from 'bcryptjs'
@@ -56,7 +56,7 @@ async function createWindow(): Promise<void> {
     height: 800,
     show: false,
     autoHideMenuBar: true,
-    ...(process.platform === 'linux' ? { icon } : {}),
+    icon: icon,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
