@@ -19,17 +19,17 @@ files:
 asar: true
 asarUnpack:
   - resources/**
-compression: maximum
+  - node_modules/sql.js/dist/**
+compression: normal
 win:
   executableName: DFM V2
   icon: build/icon.ico
-  signingHashAlgorithms:
-    - sha256
-  sign: null
+  forceCodeSigning: false
   target:
     - target: nsis
       arch:
         - x64
+  fileAssociations: []
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
