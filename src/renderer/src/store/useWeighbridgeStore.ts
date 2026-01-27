@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { create } from 'zustand'
 
 interface Transaction {
@@ -43,9 +44,13 @@ export const useWeighbridgeStore = create<WeighbridgeStore>((set) => ({
       if (result.success) {
         const transactions = await window.api.weighbridge.getAll()
         set({ transactions })
+
+        // Trigger customer account refresh - Import dynamically to avoid circular dependency
+        const { useCustomerAccountStore } = require('./useCustomerAccountStore')
+        useCustomerAccountStore.getState().fetchAllSummaries()
       }
       return result
-    } catch (error) {
+    } catch {
       return { success: false, message: 'خطأ في الاتصال بالقاعدة' }
     }
   }

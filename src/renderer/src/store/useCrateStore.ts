@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { create } from 'zustand'
 
 interface CrateTransaction {
@@ -15,6 +16,7 @@ interface CrateTransaction {
 }
 
 interface CrateSummary {
+  customer_id: number
   customer_name: string
   total_out: number
   total_returned: number
@@ -31,7 +33,7 @@ interface CrateStore {
   deleteTransaction: (id: number) => Promise<{ success: boolean; message?: string }>
 }
 
-export const useCrateStore = create<CrateStore>((set, _get) => ({
+export const useCrateStore = create<CrateStore>((set) => ({
   transactions: [],
   summary: [],
   isLoading: false,
@@ -57,9 +59,13 @@ export const useCrateStore = create<CrateStore>((set, _get) => ({
           window.api.crates.getSummary()
         ])
         set({ transactions, summary })
+
+        // Trigger customer account refresh
+        const { useCustomerAccountStore } = require('./useCustomerAccountStore')
+        useCustomerAccountStore.getState().fetchAllSummaries()
       }
       return result
-    } catch (error) {
+    } catch {
       return { success: false, message: 'خطأ في الاتصال بالقاعدة' }
     }
   },
@@ -72,9 +78,13 @@ export const useCrateStore = create<CrateStore>((set, _get) => ({
           window.api.crates.getSummary()
         ])
         set({ transactions, summary })
+
+        // Trigger customer account refresh
+        const { useCustomerAccountStore } = require('./useCustomerAccountStore')
+        useCustomerAccountStore.getState().fetchAllSummaries()
       }
       return result
-    } catch (error) {
+    } catch {
       return { success: false, message: 'خطأ في الاتصال بالقاعدة' }
     }
   },
@@ -87,9 +97,13 @@ export const useCrateStore = create<CrateStore>((set, _get) => ({
           window.api.crates.getSummary()
         ])
         set({ transactions, summary })
+
+        // Trigger customer account refresh
+        const { useCustomerAccountStore } = require('./useCustomerAccountStore')
+        useCustomerAccountStore.getState().fetchAllSummaries()
       }
       return result
-    } catch (error) {
+    } catch {
       return { success: false, message: 'خطأ في الاتصال بالقاعدة' }
     }
   }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { create } from 'zustand'
 
 interface FinanceTransaction {
@@ -13,6 +14,7 @@ interface FinanceTransaction {
 }
 
 interface FinanceSummary {
+  customer_id: number
   customer_name: string
   total_paid: number
   total_received: number
@@ -29,7 +31,7 @@ interface FinanceStore {
   deleteTransaction: (id: number) => Promise<{ success: boolean; message?: string }>
 }
 
-export const useFinanceStore = create<FinanceStore>((set, _get) => ({
+export const useFinanceStore = create<FinanceStore>((set) => ({
   transactions: [],
   summary: [],
   isLoading: false,
@@ -55,9 +57,13 @@ export const useFinanceStore = create<FinanceStore>((set, _get) => ({
           window.api.finance.getSummary()
         ])
         set({ transactions, summary })
+
+        // Trigger customer account refresh
+        const { useCustomerAccountStore } = require('./useCustomerAccountStore')
+        useCustomerAccountStore.getState().fetchAllSummaries()
       }
       return result
-    } catch (error) {
+    } catch {
       return { success: false, message: 'خطأ في الاتصال بالقاعدة' }
     }
   },
@@ -70,9 +76,13 @@ export const useFinanceStore = create<FinanceStore>((set, _get) => ({
           window.api.finance.getSummary()
         ])
         set({ transactions, summary })
+
+        // Trigger customer account refresh
+        const { useCustomerAccountStore } = require('./useCustomerAccountStore')
+        useCustomerAccountStore.getState().fetchAllSummaries()
       }
       return result
-    } catch (error) {
+    } catch {
       return { success: false, message: 'خطأ في الاتصال بالقاعدة' }
     }
   },
@@ -85,9 +95,13 @@ export const useFinanceStore = create<FinanceStore>((set, _get) => ({
           window.api.finance.getSummary()
         ])
         set({ transactions, summary })
+
+        // Trigger customer account refresh
+        const { useCustomerAccountStore } = require('./useCustomerAccountStore')
+        useCustomerAccountStore.getState().fetchAllSummaries()
       }
       return result
-    } catch (error) {
+    } catch {
       return { success: false, message: 'خطأ في الاتصال بالقاعدة' }
     }
   }

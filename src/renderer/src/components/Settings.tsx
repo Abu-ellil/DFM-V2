@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useSettingsStore } from '../store/useSettingsStore'
+import { useCustomerAccountStore } from '../store/useCustomerAccountStore'
 import { Card } from './ui/Card'
-import { 
-  Settings as SettingsIcon, 
-  Save, 
-  Database, 
-  Bell, 
-  Shield, 
-  Upload, 
+import { SyncSettings } from './SyncSettings'
+import { CloudAccount } from './CloudAccount'
+import {
+  Settings as SettingsIcon,
+  Save,
+  Database,
+  Bell,
+  Shield,
+  Upload,
   FileSpreadsheet,
   Plus,
   Trash2,
@@ -26,7 +29,12 @@ export default function Settings() {
   const [dateTypes, setDateTypes] = useState<any[]>([])
   const [crateTypes, setCrateTypes] = useState<any[]>([])
   const [supervisors, setSupervisors] = useState<any[]>([])
-  const [newName, setNewName] = useState({ dateType: '', crateType: '', crateWeight: '', supervisor: '' })
+  const [newName, setNewName] = useState({
+    dateType: '',
+    crateType: '',
+    crateWeight: '',
+    supervisor: ''
+  })
 
   // Security States
   const [passwords, setPasswords] = useState({ old: '', new: '', confirm: '' })
@@ -46,7 +54,22 @@ export default function Settings() {
   useEffect(() => {
     setFormData(settings)
     if (settings.company_name) setFactoryName(settings.company_name)
+    if (settings.telegram_token) setBotToken(settings.telegram_token)
   }, [settings])
+
+  // Listen for bulk customer account updates (e.g., after Excel import)
+  useEffect(() => {
+    const handleBulkUpdate = ({ count }: { count: number }) => {
+      toast.success(`تم استيراد ${count} عميل بنجاح`)
+      fetchDataManagement()
+      useCustomerAccountStore.getState().fetchAllSummaries()
+    }
+
+    window.api?.on?.('customerAccounts:bulkUpdate', handleBulkUpdate)
+    return () => {
+      window.api?.removeListener?.('customerAccounts:bulkUpdate', handleBulkUpdate)
+    }
+  }, [])
 
   const fetchDataManagement = async () => {
     const [dt, ct, sv] = await Promise.all([
@@ -94,9 +117,9 @@ export default function Settings() {
 
   const handleAddCrateType = async () => {
     if (!newName.crateType.trim() || !newName.crateWeight) return
-    const result = await window.api.crateTypes.create({ 
-      name: newName.crateType, 
-      weight: parseFloat(newName.crateWeight) 
+    const result = await window.api.crateTypes.create({
+      name: newName.crateType,
+      weight: parseFloat(newName.crateWeight)
     })
     if (result.success) {
       setNewName({ ...newName, crateType: '', crateWeight: '' })
@@ -152,7 +175,9 @@ export default function Settings() {
   }
 
   const handleDeleteAllData = async () => {
-    const confirmed = window.confirm('تحذير نهائي: سيتم حذف كافة البيانات (الموازين، الصناديق، الحسابات، العملاء). لا يمكن التراجع عن هذه العملية. هل تريد الاستمرار؟')
+    const confirmed = window.confirm(
+      'تحذير نهائي: سيتم حذف كافة البيانات (الموازين، الصناديق، الحسابات، العملاء). لا يمكن التراجع عن هذه العملية. هل تريد الاستمرار؟'
+    )
     if (confirmed) {
       const password = window.prompt('يرجى إدخال كلمة مرور المشرف للتأكيد:')
       if (password) {
@@ -205,7 +230,11 @@ export default function Settings() {
 
   const handleImportDb = async () => {
     try {
-      if (window.confirm('تحذير: استيراد قاعدة بيانات سيؤدي لاستبدال كافة البيانات الحالية. هل تريد الاستمرار؟')) {
+      if (
+        window.confirm(
+          'تحذير: استيراد قاعدة بيانات سيؤدي لاستبدال كافة البيانات الحالية. هل تريد الاستمرار؟'
+        )
+      ) {
         setIsProcessing(true)
         console.log('Starting DB import...')
         const result = await window.api.settings.importDb()
@@ -272,7 +301,7 @@ export default function Settings() {
     try {
       setIsProcessing(true)
       const result = await (window as any).api.telegram.sendReport()
-      
+
       if (result.success) {
         toast.success(result.message || 'تم إرسال التقرير بنجاح')
       } else {
@@ -285,6 +314,71 @@ export default function Settings() {
       setIsProcessing(false)
     }
   }
+
+  // Telegram Bot Management States
+  const [botStatus, setBotStatus] = useState<any>(null)
+  const [botToken, setBotToken] = useState(formData.telegram_token || '')
+
+  const fetchBotStatus = async () => {
+    const stats = await window.api.telegram.getStats()
+    setBotStatus(stats)
+  }
+
+  const handleStartBot = async () => {
+    const result = await window.api.telegram.startBot()
+    if (result.success) {
+      toast.success(result.message || 'تم تشغيل البوت')
+      fetchBotStatus()
+    } else {
+      toast.error(result.message || 'فشل تشغيل البوت')
+    }
+  }
+
+  const handleStopBot = async () => {
+    const result = await window.api.telegram.stopBot()
+    if (result.success) {
+      toast.success(result.message || 'تم إيقاف البوت')
+      fetchBotStatus()
+    } else {
+      toast.error(result.message || 'فشل إيقاف البوت')
+    }
+  }
+
+  const handleRestartBot = async () => {
+    const result = await window.api.telegram.restartBot()
+    if (result.success) {
+      toast.success(result.message || 'تم إعادة تشغيل البوت')
+      fetchBotStatus()
+    } else {
+      toast.error(result.message || 'فشل إعادة تشغيل البوت')
+    }
+  }
+
+  const handleTestBotConnection = async () => {
+    if (!botToken) {
+      toast.error('يرجى إدخال توكن البوت أولاً')
+      return
+    }
+    const result = await window.api.telegram.testConnection(botToken)
+    if (result.success) {
+      toast.success(`تم الاتصال بالبوت: @${result.botInfo?.username}`)
+    } else {
+      toast.error(result.message || 'فشل الاتصال بالبوت')
+    }
+  }
+
+  const handleEnableBot = async (enabled: boolean) => {
+    await handleSave('telegram_bot_enabled', enabled ? '1' : '0')
+    if (enabled) {
+      handleStartBot()
+    } else {
+      handleStopBot()
+    }
+  }
+
+  useEffect(() => {
+    fetchBotStatus()
+  }, [])
 
   return (
     <div className="space-y-6 pb-20">
@@ -299,56 +393,65 @@ export default function Settings() {
             <SettingsIcon size={20} />
             <h3 className="font-bold">الإعدادات العامة</h3>
           </div>
-          
+
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">اسم الشركة / المصنع</label>
+              <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
+                اسم الشركة / المصنع
+              </label>
               <div className="flex gap-2">
-                <input 
+                <input
                   type="text"
-                  className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
                   value={formData.company_name}
                   onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
                 />
-                <button 
+                <button
                   onClick={() => handleSave('company_name', formData.company_name)}
-                  className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors"
+                  className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors shrink-0"
+                  title="حفظ"
                 >
                   <Save size={20} />
                 </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">العنوان</label>
+                <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
+                  العنوان
+                </label>
                 <div className="flex gap-2">
-                  <input 
+                  <input
                     type="text"
-                    className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
                     value={formData.company_address}
                     onChange={(e) => setFormData({ ...formData, company_address: e.target.value })}
                   />
-                  <button 
+                  <button
                     onClick={() => handleSave('company_address', formData.company_address)}
-                    className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors"
+                    className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors shrink-0"
+                    title="حفظ"
                   >
                     <Save size={20} />
                   </button>
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">رقم الهاتف</label>
+                <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
+                  رقم الهاتف
+                </label>
                 <div className="flex gap-2">
-                  <input 
+                  <input
                     type="text"
-                    className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
                     value={formData.company_phone}
                     onChange={(e) => setFormData({ ...formData, company_phone: e.target.value })}
                   />
-                  <button 
+                  <button
                     onClick={() => handleSave('company_phone', formData.company_phone)}
-                    className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors"
+                    className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors shrink-0"
+                    title="حفظ"
                   >
                     <Save size={20} />
                   </button>
@@ -356,36 +459,42 @@ export default function Settings() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">وزن الصندوق الافتراضي (كجم)</label>
+                <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
+                  وزن الصندوق الافتراضي (كجم)
+                </label>
                 <div className="flex gap-2">
-                  <input 
+                  <input
                     type="number"
-                    className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
                     value={formData.crate_weight}
                     onChange={(e) => setFormData({ ...formData, crate_weight: e.target.value })}
                   />
-                  <button 
+                  <button
                     onClick={() => handleSave('crate_weight', formData.crate_weight)}
-                    className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors"
+                    className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors shrink-0"
+                    title="حفظ"
                   >
                     <Save size={20} />
                   </button>
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">وزن القنطار (كجم)</label>
+                <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
+                  وزن القنطار (كجم)
+                </label>
                 <div className="flex gap-2">
-                  <input 
+                  <input
                     type="number"
-                    className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
                     value={formData.qantar_weight}
                     onChange={(e) => setFormData({ ...formData, qantar_weight: e.target.value })}
                   />
-                  <button 
+                  <button
                     onClick={() => handleSave('qantar_weight', formData.qantar_weight)}
-                    className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors"
+                    className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors shrink-0"
+                    title="حفظ"
                   >
                     <Save size={20} />
                   </button>
@@ -394,12 +503,18 @@ export default function Settings() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">شعار المصنع</label>
+              <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
+                شعار المصنع
+              </label>
               <div className="flex items-center gap-4">
                 {formData.company_logo && (
                   <div className="relative w-24 h-24 border rounded-lg overflow-hidden bg-white flex items-center justify-center">
-                    <img src={formData.company_logo} alt="Logo" className="max-w-full max-h-full object-contain" />
-                    <button 
+                    <img
+                      src={formData.company_logo}
+                      alt="Logo"
+                      className="max-w-full max-h-full object-contain"
+                    />
+                    <button
                       onClick={() => handleSave('company_logo', '')}
                       className="absolute top-0 right-0 bg-red-500 text-white p-1 rounded-bl-lg hover:bg-red-600 transition-colors shadow-sm"
                     >
@@ -414,9 +529,9 @@ export default function Settings() {
                       <p className="text-xs text-slate-500 font-bold">انقر لرفع شعار المصنع</p>
                       <p className="text-[10px] text-slate-400 mt-1">يفضل أن يكون بخلفية شفافة</p>
                     </div>
-                    <input 
-                      type="file" 
-                      className="hidden" 
+                    <input
+                      type="file"
+                      className="hidden"
                       accept="image/*"
                       onChange={(e) => {
                         const file = e.target.files?.[0]
@@ -449,25 +564,31 @@ export default function Settings() {
             <div>
               <label className="block text-sm font-bold text-slate-600 mb-2">أنواع التمور</label>
               <div className="flex gap-2 mb-3">
-                <input 
+                <input
                   type="text"
                   placeholder="نوع جديد..."
-                  className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-amber-500"
+                  className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-amber-500"
                   value={newName.dateType}
                   onChange={(e) => setNewName({ ...newName, dateType: e.target.value })}
                 />
-                <button 
+                <button
                   onClick={handleAddDateType}
-                  className="bg-amber-600 text-white p-1.5 rounded-lg hover:bg-amber-700 transition-colors"
+                  className="bg-amber-600 text-white p-1.5 rounded-lg hover:bg-amber-700 transition-colors shrink-0"
                 >
                   <Plus size={18} />
                 </button>
               </div>
               <div className="flex flex-wrap gap-2">
-                {dateTypes.map(type => (
-                  <span key={type.id} className="inline-flex items-center gap-1 px-2 py-1 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-md text-xs font-bold border border-amber-100 dark:border-amber-800">
+                {dateTypes.map((type) => (
+                  <span
+                    key={type.id}
+                    className="inline-flex items-center gap-1 px-2 py-1 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-md text-xs font-bold border border-amber-100 dark:border-amber-800"
+                  >
                     {type.name}
-                    <button onClick={() => handleDeleteDateType(type.id)} className="hover:text-red-500">
+                    <button
+                      onClick={() => handleDeleteDateType(type.id)}
+                      className="hover:text-red-500"
+                    >
                       <Trash2 size={12} />
                     </button>
                   </span>
@@ -478,35 +599,41 @@ export default function Settings() {
             {/* Crate Types */}
             <div>
               <label className="block text-sm font-bold text-slate-600 mb-2">أنواع الصناديق</label>
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                <input 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+                <input
                   type="text"
                   placeholder="اسم الصندوق..."
-                  className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-amber-500"
                   value={newName.crateType}
                   onChange={(e) => setNewName({ ...newName, crateType: e.target.value })}
                 />
                 <div className="flex gap-2">
-                  <input 
+                  <input
                     type="number"
                     placeholder="الوزن..."
-                    className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-amber-500"
+                    className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-amber-500"
                     value={newName.crateWeight}
                     onChange={(e) => setNewName({ ...newName, crateWeight: e.target.value })}
                   />
-                  <button 
+                  <button
                     onClick={handleAddCrateType}
-                    className="bg-amber-600 text-white p-1.5 rounded-lg hover:bg-amber-700 transition-colors"
+                    className="bg-amber-600 text-white p-1.5 rounded-lg hover:bg-amber-700 transition-colors shrink-0"
                   >
                     <Plus size={18} />
                   </button>
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                {crateTypes.map(type => (
-                  <span key={type.id} className="inline-flex items-center gap-1 px-2 py-1 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-md text-xs font-bold border border-slate-200 dark:border-slate-700">
+                {crateTypes.map((type) => (
+                  <span
+                    key={type.id}
+                    className="inline-flex items-center gap-1 px-2 py-1 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-md text-xs font-bold border border-slate-200 dark:border-slate-700"
+                  >
                     {type.name} ({type.weight}كجم)
-                    <button onClick={() => handleDeleteCrateType(type.id)} className="hover:text-red-500">
+                    <button
+                      onClick={() => handleDeleteCrateType(type.id)}
+                      className="hover:text-red-500"
+                    >
                       <Trash2 size={12} />
                     </button>
                   </span>
@@ -518,25 +645,31 @@ export default function Settings() {
             <div>
               <label className="block text-sm font-bold text-slate-600 mb-2">المشرفين</label>
               <div className="flex gap-2 mb-3">
-                <input 
+                <input
                   type="text"
                   placeholder="اسم المشرف..."
-                  className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-amber-500"
+                  className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-amber-500"
                   value={newName.supervisor}
                   onChange={(e) => setNewName({ ...newName, supervisor: e.target.value })}
                 />
-                <button 
+                <button
                   onClick={handleAddSupervisor}
-                  className="bg-amber-600 text-white p-1.5 rounded-lg hover:bg-amber-700 transition-colors"
+                  className="bg-amber-600 text-white p-1.5 rounded-lg hover:bg-amber-700 transition-colors shrink-0"
                 >
                   <Plus size={18} />
                 </button>
               </div>
               <div className="flex flex-wrap gap-2">
-                {supervisors.map(sv => (
-                  <span key={sv.id} className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-md text-xs font-bold border border-emerald-100 dark:border-emerald-800">
+                {supervisors.map((sv) => (
+                  <span
+                    key={sv.id}
+                    className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-md text-xs font-bold border border-emerald-100 dark:border-emerald-800"
+                  >
                     {sv.name}
-                    <button onClick={() => handleDeleteSupervisor(sv.id)} className="hover:text-red-500">
+                    <button
+                      onClick={() => handleDeleteSupervisor(sv.id)}
+                      className="hover:text-red-500"
+                    >
                       <Trash2 size={12} />
                     </button>
                   </span>
@@ -546,6 +679,9 @@ export default function Settings() {
           </div>
         </Card>
 
+        {/* Cloud Account */}
+        <CloudAccount />
+
         {/* Telegram Notifications */}
         <Card className="space-y-4">
           <div className="flex items-center justify-between mb-4">
@@ -554,14 +690,14 @@ export default function Settings() {
               <h3 className="font-bold">إشعارات تلجرام</h3>
             </div>
             <div className="flex gap-2">
-              <button 
+              <button
                 onClick={handleSendReport}
                 disabled={isProcessing}
                 className="text-xs bg-blue-600 text-white px-3 py-1 rounded-full font-bold hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
                 {isProcessing ? 'جاري الإرسال...' : 'إرسال التقرير'}
               </button>
-              <button 
+              <button
                 onClick={handleTestTelegram}
                 className="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-full font-bold hover:bg-blue-100 transition-colors"
               >
@@ -569,20 +705,22 @@ export default function Settings() {
               </button>
             </div>
           </div>
-          
+
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Telegram Bot Token</label>
+              <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
+                Telegram Bot Token
+              </label>
               <div className="flex gap-2">
-                <input 
+                <input
                   type="password"
-                  className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
                   value={formData.telegram_token}
                   onChange={(e) => setFormData({ ...formData, telegram_token: e.target.value })}
                 />
-                <button 
+                <button
                   onClick={() => handleSave('telegram_token', formData.telegram_token)}
-                  className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors"
+                  className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors shrink-0"
                 >
                   <Save size={20} />
                 </button>
@@ -590,22 +728,163 @@ export default function Settings() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Chat ID</label>
+              <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
+                Chat ID
+              </label>
               <div className="flex gap-2">
-                <input 
+                <input
                   type="text"
-                  className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
                   value={formData.telegram_chat_id}
                   onChange={(e) => setFormData({ ...formData, telegram_chat_id: e.target.value })}
                 />
-                <button 
+                <button
                   onClick={() => handleSave('telegram_chat_id', formData.telegram_chat_id)}
-                  className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors"
+                  className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors shrink-0"
                 >
                   <Save size={20} />
                 </button>
               </div>
             </div>
+          </div>
+        </Card>
+
+        {/* Telegram Bot Management */}
+        <Card className="space-y-4">
+          <div className="flex items-center gap-2 mb-4 text-blue-600">
+            <Bell size={20} />
+            <h3 className="font-bold">إدارة بوت تيليجرام</h3>
+          </div>
+
+          <div className="space-y-4">
+            {/* Bot Status */}
+            <div
+              className={`p-4 rounded-lg border-2 ${botStatus?.isRunning
+                ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800'
+                : 'bg-slate-50 border-slate-200 dark:bg-slate-800 dark:border-slate-700'
+                }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`w-3 h-3 rounded-full ${botStatus?.isRunning ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
+                      }`}
+                  />
+                  <span className="font-bold text-sm">
+                    {botStatus?.isRunning ? 'البوت يعمل' : 'البوت متوقف'}
+                  </span>
+                </div>
+                <button
+                  onClick={() => handleEnableBot(!botStatus?.isRunning)}
+                  className={`text-xs px-4 py-2 rounded-full font-bold transition-colors ${botStatus?.isRunning
+                    ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                    : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                    }`}
+                >
+                  {botStatus?.isRunning ? 'إيقاف البوت' : 'تشغيل البوت'}
+                </button>
+              </div>
+            </div>
+
+            {/* Bot Token Test */}
+            <div>
+              <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
+                اختبار التوكن
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  placeholder="Telegram Bot Token"
+                  className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                  value={botToken}
+                  onChange={(e) => setBotToken(e.target.value)}
+                />
+                <button
+                  onClick={handleTestBotConnection}
+                  className="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700 transition-colors text-sm font-bold shrink-0"
+                >
+                  اختبار
+                </button>
+              </div>
+            </div>
+
+            {/* Bot Controls */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <button
+                onClick={handleStartBot}
+                disabled={!formData.telegram_token}
+                className="bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-700 transition-colors text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                تشغيل
+              </button>
+              <button
+                onClick={handleStopBot}
+                disabled={!botStatus?.isRunning}
+                className="bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                إيقاف
+              </button>
+              <button
+                onClick={handleRestartBot}
+                disabled={!formData.telegram_token}
+                className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                إعادة تشغيل
+              </button>
+            </div>
+
+            {/* Bot Stats */}
+            {botStatus?.notificationStats && (
+              <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg space-y-2 text-xs">
+                <div className="font-bold text-slate-600 dark:text-slate-400 mb-2">
+                  إحصائيات الإشعارات
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">في الانتظار:</span>
+                    <span className="font-bold">{botStatus.notificationStats.pending}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">تم الإرسال:</span>
+                    <span className="font-bold text-emerald-600">
+                      {botStatus.notificationStats.sent}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">فاشلة:</span>
+                    <span className="font-bold text-red-500">
+                      {botStatus.notificationStats.failed}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {botStatus?.registrationStats && (
+              <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg space-y-2 text-xs">
+                <div className="font-bold text-slate-600 dark:text-slate-400 mb-2">
+                  إحصائيات التسجيل
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">قيد المراجعة:</span>
+                    <span className="font-bold">{botStatus.registrationStats.pending}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">مقبولة:</span>
+                    <span className="font-bold text-emerald-600">
+                      {botStatus.registrationStats.approved}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">مرفوضة:</span>
+                    <span className="font-bold text-red-500">
+                      {botStatus.registrationStats.rejected}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </Card>
 
@@ -616,10 +895,12 @@ export default function Settings() {
             <h3 className="font-bold">قاعدة البيانات والمزامنة</h3>
           </div>
           <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 space-y-4">
-            <p className="text-sm text-slate-500 text-center">إدارة البيانات: استيراد، تصدير، ونسخ احتياطي</p>
-            
+            <p className="text-sm text-slate-500 text-center">
+              إدارة البيانات: استيراد، تصدير، ونسخ احتياطي
+            </p>
+
             <div className="grid grid-cols-1 gap-2">
-              <button 
+              <button
                 onClick={handleSync}
                 disabled={isProcessing}
                 className="w-full bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
@@ -628,7 +909,7 @@ export default function Settings() {
                 {isProcessing ? 'جاري المعالجة...' : 'تصدير نسخة احتياطية (.sqlite)'}
               </button>
 
-              <button 
+              <button
                 onClick={handleImportDb}
                 disabled={isProcessing}
                 className="w-full bg-slate-700 text-white px-6 py-2 rounded-lg hover:bg-slate-800 transition-colors font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
@@ -637,7 +918,7 @@ export default function Settings() {
                 {isProcessing ? 'جاري المعالجة...' : 'استيراد قاعدة بيانات (.sqlite)'}
               </button>
 
-              <button 
+              <button
                 onClick={handleImportExcel}
                 disabled={isProcessing}
                 className="w-full bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 transition-colors font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
@@ -649,19 +930,24 @@ export default function Settings() {
           </div>
         </Card>
 
+        {/* Cloud Sync Settings */}
+        <SyncSettings />
+
         {/* License Management */}
         <Card className="space-y-4">
           <div className="flex items-center gap-2 mb-4 text-emerald-600">
             <Key size={20} />
             <h3 className="font-bold">ترخيص البرنامج</h3>
           </div>
-          
+
           <div className="space-y-4">
             {licenseInfo && (
               <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-slate-500">حالة التفعيل:</span>
-                  <span className={`font-bold ${licenseInfo.activated ? 'text-emerald-600' : 'text-red-500'}`}>
+                  <span
+                    className={`font-bold ${licenseInfo.activated ? 'text-emerald-600' : 'text-red-500'}`}
+                  >
                     {licenseInfo.activated ? 'مفعل' : 'غير مفعل'}
                   </span>
                 </div>
@@ -683,8 +969,10 @@ export default function Settings() {
             {!licenseInfo?.activated && (
               <div className="space-y-3 pt-2">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">مفتاح الترخيص</label>
-                  <input 
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    مفتاح الترخيص
+                  </label>
+                  <input
                     type="text"
                     placeholder="XXXX-XXXX-XXXX-XXXX"
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500"
@@ -692,7 +980,7 @@ export default function Settings() {
                     onChange={(e) => setLicenseKey(e.target.value)}
                   />
                 </div>
-                <button 
+                <button
                   onClick={handleActivate}
                   className="w-full bg-emerald-600 text-white py-2 rounded-lg font-bold hover:bg-emerald-700 transition-colors"
                 >
@@ -700,10 +988,13 @@ export default function Settings() {
                 </button>
               </div>
             )}
-            
+
             <div className="flex items-start gap-2 text-xs text-slate-400 bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
               <Info size={14} className="shrink-0 text-blue-500" />
-              <p>لتفعيل البرنامج، يرجى تزويد الدعم الفني بمعرف الجهاز الخاص بك للحصول على مفتاح التفعيل.</p>
+              <p>
+                لتفعيل البرنامج، يرجى تزويد الدعم الفني بمعرف الجهاز الخاص بك للحصول على مفتاح
+                التفعيل.
+              </p>
             </div>
           </div>
         </Card>
@@ -714,7 +1005,7 @@ export default function Settings() {
             <Shield size={20} />
             <h3 className="font-bold">الأمان والصلاحيات</h3>
           </div>
-          
+
           <div className="space-y-4">
             {showPasswordChange ? (
               <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
@@ -722,21 +1013,21 @@ export default function Settings() {
                   <Lock size={18} />
                   <span className="font-bold">تغيير كلمة المرور</span>
                 </div>
-                <input 
+                <input
                   type="password"
                   placeholder="كلمة المرور الحالية"
                   className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none"
                   value={passwords.old}
                   onChange={(e) => setPasswords({ ...passwords, old: e.target.value })}
                 />
-                <input 
+                <input
                   type="password"
                   placeholder="كلمة المرور الجديدة"
                   className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none"
                   value={passwords.new}
                   onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
                 />
-                <input 
+                <input
                   type="password"
                   placeholder="تأكيد كلمة المرور الجديدة"
                   className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none"
@@ -744,13 +1035,13 @@ export default function Settings() {
                   onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
                 />
                 <div className="flex gap-2">
-                  <button 
+                  <button
                     onClick={handleChangePassword}
                     className="flex-1 bg-emerald-600 text-white py-2 rounded-lg font-bold hover:bg-emerald-700 text-sm"
                   >
                     حفظ كلمة المرور
                   </button>
-                  <button 
+                  <button
                     onClick={() => setShowPasswordChange(false)}
                     className="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded-lg font-bold text-sm"
                   >
@@ -759,7 +1050,7 @@ export default function Settings() {
                 </div>
               </div>
             ) : (
-              <button 
+              <button
                 onClick={() => setShowPasswordChange(true)}
                 className="w-full text-right p-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors flex justify-between items-center group"
               >
@@ -771,7 +1062,7 @@ export default function Settings() {
               </button>
             )}
 
-            <button 
+            <button
               onClick={handleDeleteAllData}
               className="w-full text-right p-3 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex justify-between items-center group text-red-500 border border-transparent hover:border-red-100 dark:hover:border-red-900/50"
             >
@@ -792,10 +1083,13 @@ export default function Settings() {
             <h3 className="font-bold">الدعم الفني والتواصل</h3>
           </div>
           <div className="space-y-4">
-            <p className="text-sm text-slate-500">للدعم الفني والاستفسارات أو طلب تفعيل البرنامج، يمكنك التواصل مع المطور مباشرة عبر واتساب:</p>
-            <a 
-              href="https://wa.me/201221089249" 
-              target="_blank" 
+            <p className="text-sm text-slate-500">
+              للدعم الفني والاستفسارات أو طلب تفعيل البرنامج، يمكنك التواصل مع المطور مباشرة عبر
+              واتساب:
+            </p>
+            <a
+              href="https://wa.me/201221089249"
+              target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 w-full py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20"
             >

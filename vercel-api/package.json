@@ -1,0 +1,22 @@
+{
+  "name": "dates-factory-manager-cloud-api",
+  "version": "1.0.0",
+  "description": "Cloud sync API for Dates Factory Manager V2",
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel deploy --prod"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.9.0",
+    "@vercel/node": "^5.5.27",
+    "@vercel/postgres": "^0.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "vercel": "^34.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

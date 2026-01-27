@@ -14,13 +14,14 @@ import Reports from './components/Reports'
 import Settings from './components/Settings'
 import Duplicates from './components/Duplicates'
 import CustomerDetails from './components/CustomerDetails'
-import { 
-  LayoutDashboard, 
-  Users, 
-  Scale, 
-  Package, 
-  Wallet, 
-  BarChart3, 
+import { SyncStatus } from './components/SyncStatus'
+import {
+  LayoutDashboard,
+  Users,
+  Scale,
+  Package,
+  Wallet,
+  BarChart3,
   Settings as SettingsIcon,
   LogOut,
   Menu,
@@ -29,16 +30,33 @@ import {
   Copy
 } from 'lucide-react'
 
+
 function App() {
-  const { version, isSidebarOpen, toggleSidebar } = useAppStore()
+  const {
+    version,
+    isSidebarOpen,
+    toggleSidebar,
+    activeTab,
+    setActiveTab,
+    selectedCustomerId,
+    navigateToCustomer
+  } = useAppStore()
   const { user, setUser, logout } = useAuthStore()
-  const [activeTab, setActiveTab] = useState('dashboard')
-  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null)
   const [isLicensed, setIsLicensed] = useState<boolean | null>(null)
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth)
 
   useEffect(() => {
     checkLicense()
   }, [])
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const isSmallScreen = windowWidth < 1024
+  const isSidebarOpenResponsive = isSmallScreen ? false : isSidebarOpen
 
   const checkLicense = async () => {
     try {
@@ -73,24 +91,21 @@ function App() {
     return <Login onLoginSuccess={setUser} />
   }
 
-  const handleViewCustomer = (id: number) => {
-    setSelectedCustomerId(id)
-    setActiveTab('customer-details')
-  }
-
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
         return <Dashboard />
       case 'customers':
-        return <Customers onViewCustomer={handleViewCustomer} />
+        return <Customers onViewCustomer={navigateToCustomer} />
       case 'customer-details':
         return selectedCustomerId ? (
-          <CustomerDetails 
-            customerId={selectedCustomerId} 
-            onBack={() => setActiveTab('customers')} 
+          <CustomerDetails
+            customerId={selectedCustomerId}
+            onBack={() => setActiveTab('customers')}
           />
-        ) : <Customers onViewCustomer={handleViewCustomer} />
+        ) : (
+          <Customers onViewCustomer={navigateToCustomer} />
+        )
       case 'weighbridge':
         return <Weighbridge />
       case 'crates':
@@ -109,117 +124,127 @@ function App() {
   }
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans" dir="rtl">
+    <div
+      className="flex h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans"
+      dir="rtl"
+    >
       {/* Sidebar */}
-      <aside 
-        className={`${
-          isSidebarOpen ? 'w-64' : 'w-20'
-        } bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 transition-all duration-300 flex flex-col z-20 shadow-xl print:hidden`}
+      <aside
+        className={`${isSidebarOpenResponsive ? 'w-64' : 'w-20'
+          } bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 transition-all duration-300 flex flex-col z-20 shadow-xl print:hidden`}
       >
         {/* Logo Area */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-slate-100 dark:border-slate-800">
-          {isSidebarOpen && (
+          {isSidebarOpenResponsive && (
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white font-bold">D</div>
+              <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white font-bold">
+                D
+              </div>
               <span className="font-bold text-lg tracking-tight">DATES V2</span>
             </div>
           )}
-          <button 
+          <button
             onClick={toggleSidebar}
             className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
           >
-            {isSidebarOpen ? <ChevronRight size={20} /> : <Menu size={20} />}
+            {isSidebarOpenResponsive ? <ChevronRight size={20} /> : <Menu size={20} />}
           </button>
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 py-4 overflow-y-auto px-2 space-y-1">
-          <NavItem 
-            icon={<LayoutDashboard size={20} />} 
-            label="الرئيسية" 
-            isOpen={isSidebarOpen} 
-            active={activeTab === 'dashboard'} 
+          <NavItem
+            icon={<LayoutDashboard size={20} />}
+            label="الرئيسية"
+            isOpen={isSidebarOpenResponsive}
+            active={activeTab === 'dashboard'}
             onClick={() => setActiveTab('dashboard')}
           />
-          <NavItem 
-            icon={<Scale size={20} />} 
-            label="الميزان" 
-            isOpen={isSidebarOpen} 
-            active={activeTab === 'weighbridge'} 
+          <NavItem
+            icon={<Scale size={20} />}
+            label="الميزان"
+            isOpen={isSidebarOpenResponsive}
+            active={activeTab === 'weighbridge'}
             onClick={() => setActiveTab('weighbridge')}
           />
-          <NavItem 
-            icon={<Users size={20} />} 
-            label="العملاء" 
-            isOpen={isSidebarOpen} 
-            active={activeTab === 'customers'} 
+          <NavItem
+            icon={<Users size={20} />}
+            label="العملاء"
+            isOpen={isSidebarOpenResponsive}
+            active={activeTab === 'customers'}
             onClick={() => setActiveTab('customers')}
           />
-          <NavItem 
-            icon={<Package size={20} />} 
-            label="الصناديق" 
-            isOpen={isSidebarOpen} 
-            active={activeTab === 'crates'} 
+          <NavItem
+            icon={<Package size={20} />}
+            label="الصناديق"
+            isOpen={isSidebarOpenResponsive}
+            active={activeTab === 'crates'}
             onClick={() => setActiveTab('crates')}
           />
-          <NavItem 
-            icon={<Wallet size={20} />} 
-            label="الحسابات" 
-            isOpen={isSidebarOpen} 
-            active={activeTab === 'finance'} 
+          <NavItem
+            icon={<Wallet size={20} />}
+            label="الحسابات"
+            isOpen={isSidebarOpenResponsive}
+            active={activeTab === 'finance'}
             onClick={() => setActiveTab('finance')}
           />
-          <NavItem 
-            icon={<BarChart3 size={20} />} 
-            label="التقارير" 
-            isOpen={isSidebarOpen} 
-            active={activeTab === 'reports'} 
+          <NavItem
+            icon={<BarChart3 size={20} />}
+            label="التقارير"
+            isOpen={isSidebarOpenResponsive}
+            active={activeTab === 'reports'}
             onClick={() => setActiveTab('reports')}
           />
-          <NavItem 
-            icon={<Copy size={20} />} 
-            label="العمليات المكررة" 
-            isOpen={isSidebarOpen} 
-            active={activeTab === 'duplicates'} 
+          <NavItem
+            icon={<Copy size={20} />}
+            label="العمليات المكررة"
+            isOpen={isSidebarOpenResponsive}
+            active={activeTab === 'duplicates'}
             onClick={() => setActiveTab('duplicates')}
           />
           <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
-            <NavItem 
-              icon={<SettingsIcon size={20} />} 
-              label="الإعدادات" 
-              isOpen={isSidebarOpen} 
-              active={activeTab === 'settings'} 
+            <NavItem
+              icon={<SettingsIcon size={20} />}
+              label="الإعدادات"
+              isOpen={isSidebarOpenResponsive}
+              active={activeTab === 'settings'}
               onClick={() => setActiveTab('settings')}
             />
-            <NavItem 
-              icon={<LogOut size={20} />} 
-              label="خروج" 
-              isOpen={isSidebarOpen} 
+            <NavItem
+              icon={<LogOut size={20} />}
+              label="خروج"
+              isOpen={isSidebarOpenResponsive}
               onClick={logout}
               className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
             />
           </div>
-        </nav>
 
-        {/* Footer Info */}
-        {isSidebarOpen && (
-          <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex flex-col items-center gap-2">
-            <div className="text-[10px] text-slate-400 text-center">
-              الإصدار {version}
-            </div>
-            <a 
-              href="https://wa.me/201221089249" 
-              target="_blank" 
+          {/* Contact Developer - Always visible */}
+          <div className="border-t border-slate-100 dark:border-slate-800 pt-2 mt-2">
+            <a
+              href="https://wa.me/201221089249"
+              target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline font-bold"
+              className="block"
             >
-              <span>للتواصل مع المطور</span>
-              <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-              </svg>
+              <NavItem
+                icon={
+                  <svg className="w-5 h-5 fill-current text-emerald-500" viewBox="0 0 24 24">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                  </svg>
+                }
+                label="تواصل مع المطور"
+                isOpen={isSidebarOpenResponsive}
+                className="hover:bg-emerald-50 dark:hover:bg-emerald-900/20 !text-emerald-600 dark:!text-emerald-400 hover:!text-emerald-700"
+              />
             </a>
+            {isSidebarOpenResponsive && (
+              <div className="text-[10px] text-slate-400 text-center px-3 pb-2">
+                الإصدار {version}
+              </div>
+            )}
           </div>
-        )}
+        </nav>
       </aside>
 
       {/* Main Content */}
@@ -233,6 +258,7 @@ function App() {
           </div>
 
           <div className="flex items-center gap-3">
+            <SyncStatus />
             <button className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors relative">
               <Bell size={20} />
               <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>
@@ -241,7 +267,9 @@ function App() {
             <div className="flex items-center gap-3">
               <div className="text-left hidden sm:block">
                 <p className="text-sm font-bold leading-none">{user.username}</p>
-                <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-wider">{user.role}</p>
+                <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-wider">
+                  {user.role}
+                </p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white font-bold shadow-lg shadow-emerald-500/20">
                 {user.username.charAt(0).toUpperCase()}
@@ -260,17 +288,18 @@ function App() {
   )
 }
 
-function NavItem({ icon, label, isOpen, active = false, onClick, className = "" }: any) {
+function NavItem({ icon, label, isOpen, active = false, onClick, className = '' }: any) {
   return (
-    <button 
+    <button
       onClick={onClick}
-      className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group ${
-        active 
-          ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20' 
+      className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group ${active
+          ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
           : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-      } ${className}`}
+        } ${className}`}
     >
-      <div className={`${active ? 'text-white' : 'group-hover:text-emerald-600'} transition-colors`}>
+      <div
+        className={`${active ? 'text-white' : 'group-hover:text-emerald-600'} transition-colors`}
+      >
         {icon}
       </div>
       {isOpen && <span className="font-bold text-sm tracking-wide">{label}</span>}

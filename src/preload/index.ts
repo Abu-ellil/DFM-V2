@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
@@ -5,73 +6,121 @@ import { electronAPI } from '@electron-toolkit/preload'
 const api = {
   auth: {
     login: (credentials) => ipcRenderer.invoke('auth:login', credentials),
-    changePassword: (data) => ipcRenderer.invoke('auth:changePassword', data),
+    changePassword: (data) => ipcRenderer.invoke('auth:changePassword', data)
   },
   customers: {
     getAll: () => ipcRenderer.invoke('customers:getAll'),
     create: (customer) => ipcRenderer.invoke('customers:create', customer),
     update: (id, customer) => ipcRenderer.invoke('customers:update', id, customer),
-    delete: (id) => ipcRenderer.invoke('customers:delete', id),
+    delete: (id) => ipcRenderer.invoke('customers:delete', id)
   },
   dateTypes: {
     getAll: () => ipcRenderer.invoke('dateTypes:getAll'),
     create: (name) => ipcRenderer.invoke('dateTypes:create', name),
-    delete: (id) => ipcRenderer.invoke('dateTypes:delete', id),
+    delete: (id) => ipcRenderer.invoke('dateTypes:delete', id)
   },
   crateTypes: {
     getAll: () => ipcRenderer.invoke('crateTypes:getAll'),
     create: (data) => ipcRenderer.invoke('crateTypes:create', data),
-    delete: (id) => ipcRenderer.invoke('crateTypes:delete', id),
+    delete: (id) => ipcRenderer.invoke('crateTypes:delete', id)
   },
   supervisors: {
     getAll: () => ipcRenderer.invoke('supervisors:getAll'),
     create: (name) => ipcRenderer.invoke('supervisors:create', name),
-    delete: (id) => ipcRenderer.invoke('supervisors:delete', id),
+    delete: (id) => ipcRenderer.invoke('supervisors:delete', id)
   },
   weighbridge: {
     getAll: () => ipcRenderer.invoke('weighbridge:getAll'),
-    create: (data) => ipcRenderer.invoke('weighbridge:create', data),
+    create: (data) => ipcRenderer.invoke('weighbridge:create', data)
   },
   crates: {
-      getAll: () => ipcRenderer.invoke('crates:getAll'),
-      getSummary: () => ipcRenderer.invoke('crates:getSummary'),
-      create: (data) => ipcRenderer.invoke('crates:create', data),
-      update: (id, data) => ipcRenderer.invoke('crates:update', id, data),
-      delete: (id) => ipcRenderer.invoke('crates:delete', id),
-    },
+    getAll: () => ipcRenderer.invoke('crates:getAll'),
+    getSummary: () => ipcRenderer.invoke('crates:getSummary'),
+    create: (data) => ipcRenderer.invoke('crates:create', data),
+    update: (id, data) => ipcRenderer.invoke('crates:update', id, data),
+    delete: (id) => ipcRenderer.invoke('crates:delete', id)
+  },
   finance: {
-      getAll: () => ipcRenderer.invoke('finance:getAll'),
-      getSummary: () => ipcRenderer.invoke('finance:getSummary'),
-      create: (data) => ipcRenderer.invoke('finance:create', data),
-      update: (id, data) => ipcRenderer.invoke('finance:update', id, data),
-      delete: (id) => ipcRenderer.invoke('finance:delete', id),
-    },
+    getAll: () => ipcRenderer.invoke('finance:getAll'),
+    getSummary: () => ipcRenderer.invoke('finance:getSummary'),
+    create: (data) => ipcRenderer.invoke('finance:create', data),
+    update: (id, data) => ipcRenderer.invoke('finance:update', id, data),
+    delete: (id) => ipcRenderer.invoke('finance:delete', id)
+  },
+  customerAccounts: {
+    getSummary: (customerId?: number) => ipcRenderer.invoke('customerAccounts:getSummary', customerId),
+    getRecentTransactions: (customerId: number, limit?: number) =>
+      ipcRenderer.invoke('customerAccounts:getRecentTransactions', customerId, limit)
+  },
   settings: {
     getAll: () => ipcRenderer.invoke('settings:getAll'),
     update: (key, value) => ipcRenderer.invoke('settings:update', key, value),
     sync: () => ipcRenderer.invoke('settings:sync'),
     importDb: () => ipcRenderer.invoke('settings:importDb'),
     importExcel: () => ipcRenderer.invoke('settings:importExcel'),
-    deleteAllData: () => ipcRenderer.invoke('settings:deleteAllData'),
+    deleteAllData: () => ipcRenderer.invoke('settings:deleteAllData')
   },
   reports: {
-    exportExcel: (data: { title: string; columns: any[]; data: any[] }) => ipcRenderer.invoke('reports:exportExcel', data),
+    exportExcel: (data: { title: string; columns: any[]; data: any[] }) =>
+      ipcRenderer.invoke('reports:exportExcel', data)
   },
   telegram: {
     send: (data) => ipcRenderer.invoke('telegram:send', data),
     sendReport: () => ipcRenderer.invoke('telegram:sendReport'),
+    // Bot management
+    startBot: () => ipcRenderer.invoke('telegram:startBot'),
+    stopBot: () => ipcRenderer.invoke('telegram:stopBot'),
+    restartBot: () => ipcRenderer.invoke('telegram:restartBot'),
+    testConnection: (token?: string) => ipcRenderer.invoke('telegram:testConnection', token),
+    getStats: () => ipcRenderer.invoke('telegram:getStats'),
+    // User management
+    getUsers: (filters?: any) => ipcRenderer.invoke('telegram:getUsers', filters),
+    updateUser: (telegramId: number, data: any) =>
+      ipcRenderer.invoke('telegram:updateUser', telegramId, data),
+    deleteUser: (telegramId: number) => ipcRenderer.invoke('telegram:deleteUser', telegramId),
+    // Registration management
+    getRegistrations: (filters?: any) => ipcRenderer.invoke('telegram:getRegistrations', filters),
+    approveRegistration: (registrationId: number, role: string, reviewerUserId: number) =>
+      ipcRenderer.invoke('telegram:approveRegistration', registrationId, role, reviewerUserId),
+    rejectRegistration: (registrationId: number, reason?: string, reviewerUserId?: number) =>
+      ipcRenderer.invoke('telegram:rejectRegistration', registrationId, reason, reviewerUserId)
   },
   license: {
     getInfo: () => ipcRenderer.invoke('license:getInfo'),
     getMachineId: () => ipcRenderer.invoke('license:getMachineId'),
     activate: (data) => ipcRenderer.invoke('license:activate', data),
     check: () => ipcRenderer.invoke('license:check'),
-    openTrialRequest: () => ipcRenderer.invoke('license:openTrialRequest'),
+    openTrialRequest: () => ipcRenderer.invoke('license:openTrialRequest')
   },
   duplicates: {
     getAll: () => ipcRenderer.invoke('duplicates:getAll'),
     delete: (data) => ipcRenderer.invoke('duplicates:delete', data),
-    autoClean: () => ipcRenderer.invoke('duplicates:autoClean'),
+    autoClean: () => ipcRenderer.invoke('duplicates:autoClean')
+  },
+  sync: {
+    getStatus: () => ipcRenderer.invoke('sync:getStatus'),
+    manualSync: () => ipcRenderer.invoke('sync:manualSync'),
+    enable: () => ipcRenderer.invoke('sync:enable'),
+    disable: () => ipcRenderer.invoke('sync:disable'),
+    getConflicts: (limit?: number) => ipcRenderer.invoke('sync:getConflicts', limit),
+    clearOldConflicts: (olderThanDays?: number) =>
+      ipcRenderer.invoke('sync:clearOldConflicts', olderThanDays)
+  },
+  cloudAccount: {
+    register: (data: { phone: string; password: string; factoryName?: string }) =>
+      ipcRenderer.invoke('cloudAccount:register', data),
+    login: (data: { phone: string; password: string }) =>
+      ipcRenderer.invoke('cloudAccount:login', data),
+    restore: (data: { phone: string; password: string }) =>
+      ipcRenderer.invoke('cloudAccount:restore', data),
+    getStatus: () => ipcRenderer.invoke('cloudAccount:getStatus')
+  },
+  print: () => ipcRenderer.invoke('app:print'),
+  on: (channel, callback) => {
+    ipcRenderer.on(channel, (_event, ...args) => callback(...args))
+  },
+  removeListener: (channel, callback) => {
+    ipcRenderer.removeListener(channel, (_event, ...args) => callback(...args))
   }
 }
 

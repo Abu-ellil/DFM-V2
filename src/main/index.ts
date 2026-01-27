@@ -1,16 +1,35 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'path'
 import { writeFile, readFile } from 'fs/promises'
 import * as XLSX from 'xlsx'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import icon from '../../resources/icon.png?asset'
+import icon from '../../resources/icon.ico?asset'
 import { initializeDatabase, getDb, saveDatabase, getDbPath } from './db'
+import { enqueueChange } from './sync/queue'
 import bcrypt from 'bcryptjs'
-import { generateReportData, generateReportSummary, generateExcelReport, generateJsonReport, sendReportToTelegram } from './reports'
+import {
+  generateReportData,
+  generateReportSummary,
+  generateExcelReport,
+  generateJsonReport,
+  sendReportToTelegram
+} from './reports'
+import {
+  startTelegramBot,
+  stopTelegramBot,
+  restartTelegramBot,
+  testBotConnection,
+  getBotStats
+} from './telegram'
+import * as syncConflict from './sync/conflict'
+import * as webAuth from './web-auth'
 
-// Import license manager from root
-// @ts-ignore (license.js is in root)
-import licenseManager = require('../../../license.js')
+// Import license manager
+import * as licenseManager from './license'
+import * as sync from './sync'
+import { getRegistrationHandler } from './telegram/handlers/registration'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -23,16 +42,29 @@ async function createWindow(): Promise<void> {
     console.error('Failed to initialize database:', error)
   }
 
+  // Start Telegram bot if configured
+  try {
+    const botResult = await startTelegramBot()
+    if (botResult.success) {
+      console.log('Telegram bot started:', botResult.message)
+    } else {
+      console.log('Telegram bot not started:', botResult.message)
+    }
+  } catch (error) {
+    console.error('Failed to start Telegram bot:', error)
+  }
+
   // Create the browser window.
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     show: false,
     autoHideMenuBar: true,
-    ...(process.platform === 'linux' ? { icon } : {}),
+    icon: icon,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: false,
+      plugins: true
     }
   })
 
@@ -60,11 +92,11 @@ ipcMain.handle('auth:login', async (_event, { username, password }) => {
     const db = getDb()
     const stmt = db.prepare('SELECT * FROM users WHERE username = ?')
     stmt.bind([username])
-    
+
     if (stmt.step()) {
       const user = stmt.getAsObject() as any
       stmt.free()
-      
+
       const passwordMatch = bcrypt.compareSync(password, user.password)
       if (passwordMatch) {
         return { success: true, user: { id: user.id, username: user.username, role: user.role } }
@@ -72,7 +104,7 @@ ipcMain.handle('auth:login', async (_event, { username, password }) => {
     } else {
       stmt.free()
     }
-    
+
     return { success: false, message: 'اسم المستخدم أو كلمة المرور غير صحيحة' }
   } catch (error) {
     console.error('Login error:', error)
@@ -87,9 +119,9 @@ ipcMain.handle('customers:getAll', async () => {
     const res = db.exec('SELECT * FROM customers ORDER BY name ASC')
     if (res.length === 0) return []
     const columns = res[0].columns
-    return res[0].values.map(row => {
+    return res[0].values.map((row) => {
       const obj = {}
-      columns.forEach((col, i) => obj[col] = row[i])
+      columns.forEach((col, i) => (obj[col] = row[i]))
       return obj
     })
   } catch (error) {
@@ -105,7 +137,19 @@ ipcMain.handle('customers:create', async (_event, customer) => {
     stmt.bind([customer.name, customer.type, customer.phone])
     stmt.run()
     stmt.free()
+
+    const lastId = db.exec('SELECT last_insert_rowid() as id')[0].values[0][0] as number
     await saveDatabase()
+
+    // Enqueue for sync
+    await enqueueChange({
+      operation: 'INSERT',
+      table: 'customers',
+      record_id: lastId,
+      data: { ...customer, id: lastId, _client_id: null, _synced_at: null, _version: 1 },
+      client_timestamp: Date.now()
+    }).catch((err) => console.error('Failed to enqueue change:', err))
+
     return { success: true }
   } catch (error) {
     console.error('Create customer error:', error)
@@ -121,6 +165,16 @@ ipcMain.handle('customers:update', async (_event, id, customer) => {
     stmt.run()
     stmt.free()
     await saveDatabase()
+
+    // Enqueue for sync
+    await enqueueChange({
+      operation: 'UPDATE',
+      table: 'customers',
+      record_id: id,
+      data: customer,
+      client_timestamp: Date.now()
+    }).catch((err) => console.error('Failed to enqueue change:', err))
+
     return { success: true }
   } catch (error) {
     console.error('Update customer error:', error)
@@ -136,6 +190,16 @@ ipcMain.handle('customers:delete', async (_event, id) => {
     stmt.run()
     stmt.free()
     await saveDatabase()
+
+    // Enqueue for sync
+    await enqueueChange({
+      operation: 'DELETE',
+      table: 'customers',
+      record_id: id,
+      data: { id },
+      client_timestamp: Date.now()
+    }).catch((err) => console.error('Failed to enqueue change:', err))
+
     return { success: true }
   } catch (error) {
     console.error('Delete customer error:', error)
@@ -150,12 +214,12 @@ ipcMain.handle('dateTypes:getAll', async () => {
     const res = db.exec('SELECT * FROM date_types ORDER BY name ASC')
     if (res.length === 0) return []
     const columns = res[0].columns
-    return res[0].values.map(row => {
+    return res[0].values.map((row) => {
       const obj = {}
-      columns.forEach((col, i) => obj[col] = row[i])
+      columns.forEach((col, i) => (obj[col] = row[i]))
       return obj
     })
-  } catch (error) {
+  } catch {
     return []
   }
 })
@@ -169,7 +233,7 @@ ipcMain.handle('dateTypes:create', async (_event, name) => {
     stmt.free()
     await saveDatabase()
     return { success: true }
-  } catch (error) {
+  } catch {
     return { success: false, message: 'فشل إضافة النوع' }
   }
 })
@@ -183,7 +247,7 @@ ipcMain.handle('dateTypes:delete', async (_event, id) => {
     stmt.free()
     await saveDatabase()
     return { success: true }
-  } catch (error) {
+  } catch {
     return { success: false, message: 'فشل حذف النوع' }
   }
 })
@@ -194,12 +258,12 @@ ipcMain.handle('crateTypes:getAll', async () => {
     const res = db.exec('SELECT * FROM crate_types ORDER BY name ASC')
     if (res.length === 0) return []
     const columns = res[0].columns
-    return res[0].values.map(row => {
+    return res[0].values.map((row) => {
       const obj = {}
-      columns.forEach((col, i) => obj[col] = row[i])
+      columns.forEach((col, i) => (obj[col] = row[i]))
       return obj
     })
-  } catch (error) {
+  } catch {
     return []
   }
 })
@@ -213,7 +277,7 @@ ipcMain.handle('crateTypes:create', async (_event, { name, weight }) => {
     stmt.free()
     await saveDatabase()
     return { success: true }
-  } catch (error) {
+  } catch {
     return { success: false, message: 'فشل إضافة نوع الصندوق' }
   }
 })
@@ -227,7 +291,7 @@ ipcMain.handle('crateTypes:delete', async (_event, id) => {
     stmt.free()
     await saveDatabase()
     return { success: true }
-  } catch (error) {
+  } catch {
     return { success: false, message: 'فشل حذف نوع الصندوق' }
   }
 })
@@ -239,12 +303,12 @@ ipcMain.handle('supervisors:getAll', async () => {
     const res = db.exec('SELECT * FROM supervisors ORDER BY name ASC')
     if (res.length === 0) return []
     const columns = res[0].columns
-    return res[0].values.map(row => {
+    return res[0].values.map((row) => {
       const obj = {}
-      columns.forEach((col, i) => obj[col] = row[i])
+      columns.forEach((col, i) => (obj[col] = row[i]))
       return obj
     })
-  } catch (error) {
+  } catch {
     return []
   }
 })
@@ -258,7 +322,7 @@ ipcMain.handle('supervisors:create', async (_event, name) => {
     stmt.free()
     await saveDatabase()
     return { success: true }
-  } catch (error) {
+  } catch {
     return { success: false, message: 'فشل إضافة المشرف' }
   }
 })
@@ -272,7 +336,7 @@ ipcMain.handle('supervisors:delete', async (_event, id) => {
     stmt.free()
     await saveDatabase()
     return { success: true }
-  } catch (error) {
+  } catch {
     return { success: false, message: 'فشل حذف المشرف' }
   }
 })
@@ -290,9 +354,9 @@ ipcMain.handle('weighbridge:getAll', async () => {
     `)
     if (res.length === 0) return []
     const columns = res[0].columns
-    return res[0].values.map(row => {
+    return res[0].values.map((row) => {
       const obj = {}
-      columns.forEach((col, i) => obj[col] = row[i])
+      columns.forEach((col, i) => (obj[col] = row[i]))
       return obj
     })
   } catch (error) {
@@ -308,10 +372,36 @@ ipcMain.handle('weighbridge:create', async (_event, data) => {
       INSERT INTO weighbridge (date, customer_id, date_type_id, gross_weight, net_weight, price_per_qantar, total, crates_count, commission, notes)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
-    stmt.bind([data.date, data.customer_id, data.date_type_id, data.gross_weight, data.net_weight, data.price_per_qantar, data.total, data.crates_count, data.commission, data.notes])
+    stmt.bind([
+      data.date,
+      data.customer_id,
+      data.date_type_id,
+      data.gross_weight,
+      data.net_weight,
+      data.price_per_qantar,
+      data.total,
+      data.crates_count,
+      data.commission,
+      data.notes
+    ])
     stmt.run()
     stmt.free()
+
+    const lastId = db.exec('SELECT last_insert_rowid() as id')[0].values[0][0] as number
     await saveDatabase()
+
+    // Enqueue for sync
+    await enqueueChange({
+      operation: 'INSERT',
+      table: 'weighbridge',
+      record_id: lastId,
+      data: { ...data, id: lastId },
+      client_timestamp: Date.now()
+    }).catch((err) => console.error('Failed to enqueue change:', err))
+
+    // Send customer account update notification
+    mainWindow?.webContents.send('customerAccounts:updated', { customerId: data.customer_id })
+
     return { success: true }
   } catch (error) {
     console.error('Create weighbridge error:', error)
@@ -332,9 +422,9 @@ ipcMain.handle('crates:getAll', async () => {
     `)
     if (res.length === 0) return []
     const columns = res[0].columns
-    return res[0].values.map(row => {
+    return res[0].values.map((row) => {
       const obj = {}
-      columns.forEach((col, i) => obj[col] = row[i])
+      columns.forEach((col, i) => (obj[col] = row[i]))
       return obj
     })
   } catch (error) {
@@ -348,6 +438,7 @@ ipcMain.handle('crates:getSummary', async () => {
     const db = getDb()
     const res = db.exec(`
       SELECT 
+        cr.customer_id,
         c.name as customer_name,
         SUM(cr.crates_out) as total_out,
         SUM(cr.crates_returned) as total_returned,
@@ -359,9 +450,9 @@ ipcMain.handle('crates:getSummary', async () => {
     `)
     if (res.length === 0) return []
     const columns = res[0].columns
-    return res[0].values.map(row => {
+    return res[0].values.map((row) => {
       const obj = {}
-      columns.forEach((col, i) => obj[col] = row[i])
+      columns.forEach((col, i) => (obj[col] = row[i]))
       return obj
     })
   } catch (error) {
@@ -377,10 +468,33 @@ ipcMain.handle('crates:create', async (_event, data) => {
       INSERT INTO crates (date, customer_id, crate_type_id, crates_out, crates_returned, handler, notes)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `)
-    stmt.bind([data.date, data.customer_id, data.crate_type_id, data.crates_out, data.crates_returned, data.handler, data.notes])
+    stmt.bind([
+      data.date,
+      data.customer_id,
+      data.crate_type_id,
+      data.crates_out,
+      data.crates_returned,
+      data.handler,
+      data.notes
+    ])
     stmt.run()
     stmt.free()
+
+    const lastId = db.exec('SELECT last_insert_rowid() as id')[0].values[0][0] as number
     await saveDatabase()
+
+    // Enqueue for sync
+    await enqueueChange({
+      operation: 'INSERT',
+      table: 'crates',
+      record_id: lastId,
+      data: { ...data, id: lastId },
+      client_timestamp: Date.now()
+    }).catch((err) => console.error('Failed to enqueue change:', err))
+
+    // Send customer account update notification
+    mainWindow?.webContents.send('customerAccounts:updated', { customerId: data.customer_id })
+
     return { success: true }
   } catch (error) {
     console.error('Create crate transaction error:', error)
@@ -392,14 +506,36 @@ ipcMain.handle('crates:update', async (_event, id, data) => {
   try {
     const db = getDb()
     const stmt = db.prepare(`
-      UPDATE crates 
+      UPDATE crates
       SET date = ?, customer_id = ?, crate_type_id = ?, crates_out = ?, crates_returned = ?, handler = ?, notes = ?
       WHERE id = ?
     `)
-    stmt.bind([data.date, data.customer_id, data.crate_type_id, data.crates_out, data.crates_returned, data.handler, data.notes, id])
+    stmt.bind([
+      data.date,
+      data.customer_id,
+      data.crate_type_id,
+      data.crates_out,
+      data.crates_returned,
+      data.handler,
+      data.notes,
+      id
+    ])
     stmt.run()
     stmt.free()
     await saveDatabase()
+
+    // Enqueue for sync
+    await enqueueChange({
+      operation: 'UPDATE',
+      table: 'crates',
+      record_id: id,
+      data: data,
+      client_timestamp: Date.now()
+    }).catch((err) => console.error('Failed to enqueue change:', err))
+
+    // Send customer account update notification
+    mainWindow?.webContents.send('customerAccounts:updated', { customerId: data.customer_id })
+
     return { success: true }
   } catch (error) {
     console.error('Update crate transaction error:', error)
@@ -410,11 +546,36 @@ ipcMain.handle('crates:update', async (_event, id, data) => {
 ipcMain.handle('crates:delete', async (_event, id) => {
   try {
     const db = getDb()
+
+    // Get customer_id before deleting
+    const getStmt = db.prepare('SELECT customer_id FROM crates WHERE id = ?')
+    getStmt.bind([id])
+    let customerId: number | null = null
+    if (getStmt.step()) {
+      customerId = getStmt.getAsObject().customer_id as number
+    }
+    getStmt.free()
+
     const stmt = db.prepare('DELETE FROM crates WHERE id = ?')
     stmt.bind([id])
     stmt.run()
     stmt.free()
     await saveDatabase()
+
+    // Enqueue for sync
+    await enqueueChange({
+      operation: 'DELETE',
+      table: 'crates',
+      record_id: id,
+      data: { id },
+      client_timestamp: Date.now()
+    }).catch((err) => console.error('Failed to enqueue change:', err))
+
+    // Send customer account update notification
+    if (customerId) {
+      mainWindow?.webContents.send('customerAccounts:updated', { customerId })
+    }
+
     return { success: true }
   } catch (error) {
     console.error('Delete crate transaction error:', error)
@@ -434,9 +595,9 @@ ipcMain.handle('finance:getAll', async () => {
     `)
     if (res.length === 0) return []
     const columns = res[0].columns
-    return res[0].values.map(row => {
+    return res[0].values.map((row) => {
       const obj = {}
-      columns.forEach((col, i) => obj[col] = row[i])
+      columns.forEach((col, i) => (obj[col] = row[i]))
       return obj
     })
   } catch (error) {
@@ -450,6 +611,7 @@ ipcMain.handle('finance:getSummary', async () => {
     const db = getDb()
     const res = db.exec(`
       SELECT 
+        f.customer_id,
         c.name as customer_name,
         SUM(f.amount_paid) as total_paid,
         SUM(f.amount_received) as total_received,
@@ -460,9 +622,9 @@ ipcMain.handle('finance:getSummary', async () => {
     `)
     if (res.length === 0) return []
     const columns = res[0].columns
-    return res[0].values.map(row => {
+    return res[0].values.map((row) => {
       const obj = {}
-      columns.forEach((col, i) => obj[col] = row[i])
+      columns.forEach((col, i) => (obj[col] = row[i]))
       return obj
     })
   } catch (error) {
@@ -478,10 +640,32 @@ ipcMain.handle('finance:create', async (_event, data) => {
       INSERT INTO finance (date, customer_id, transaction_type, amount_paid, amount_received, notes)
       VALUES (?, ?, ?, ?, ?, ?)
     `)
-    stmt.bind([data.date, data.customer_id, data.transaction_type, data.amount_paid, data.amount_received, data.notes])
+    stmt.bind([
+      data.date,
+      data.customer_id,
+      data.transaction_type,
+      data.amount_paid,
+      data.amount_received,
+      data.notes
+    ])
     stmt.run()
     stmt.free()
+
+    const lastId = db.exec('SELECT last_insert_rowid() as id')[0].values[0][0] as number
     await saveDatabase()
+
+    // Enqueue for sync
+    await enqueueChange({
+      operation: 'INSERT',
+      table: 'finance',
+      record_id: lastId,
+      data: { ...data, id: lastId },
+      client_timestamp: Date.now()
+    }).catch((err) => console.error('Failed to enqueue change:', err))
+
+    // Send customer account update notification
+    mainWindow?.webContents.send('customerAccounts:updated', { customerId: data.customer_id })
+
     return { success: true }
   } catch (error) {
     console.error('Create finance transaction error:', error)
@@ -493,14 +677,35 @@ ipcMain.handle('finance:update', async (_event, id, data) => {
   try {
     const db = getDb()
     const stmt = db.prepare(`
-      UPDATE finance 
+      UPDATE finance
       SET date = ?, customer_id = ?, transaction_type = ?, amount_paid = ?, amount_received = ?, notes = ?
       WHERE id = ?
     `)
-    stmt.bind([data.date, data.customer_id, data.transaction_type, data.amount_paid, data.amount_received, data.notes, id])
+    stmt.bind([
+      data.date,
+      data.customer_id,
+      data.transaction_type,
+      data.amount_paid,
+      data.amount_received,
+      data.notes,
+      id
+    ])
     stmt.run()
     stmt.free()
     await saveDatabase()
+
+    // Enqueue for sync
+    await enqueueChange({
+      operation: 'UPDATE',
+      table: 'finance',
+      record_id: id,
+      data: data,
+      client_timestamp: Date.now()
+    }).catch((err) => console.error('Failed to enqueue change:', err))
+
+    // Send customer account update notification
+    mainWindow?.webContents.send('customerAccounts:updated', { customerId: data.customer_id })
+
     return { success: true }
   } catch (error) {
     console.error('Update finance transaction error:', error)
@@ -511,11 +716,36 @@ ipcMain.handle('finance:update', async (_event, id, data) => {
 ipcMain.handle('finance:delete', async (_event, id) => {
   try {
     const db = getDb()
+
+    // Get customer_id before deleting
+    const getStmt = db.prepare('SELECT customer_id FROM finance WHERE id = ?')
+    getStmt.bind([id])
+    let customerId: number | null = null
+    if (getStmt.step()) {
+      customerId = getStmt.getAsObject().customer_id as number
+    }
+    getStmt.free()
+
     const stmt = db.prepare('DELETE FROM finance WHERE id = ?')
     stmt.bind([id])
     stmt.run()
     stmt.free()
     await saveDatabase()
+
+    // Enqueue for sync
+    await enqueueChange({
+      operation: 'DELETE',
+      table: 'finance',
+      record_id: id,
+      data: { id },
+      client_timestamp: Date.now()
+    }).catch((err) => console.error('Failed to enqueue change:', err))
+
+    // Send customer account update notification
+    if (customerId) {
+      mainWindow?.webContents.send('customerAccounts:updated', { customerId })
+    }
+
     return { success: true }
   } catch (error) {
     console.error('Delete finance transaction error:', error)
@@ -523,7 +753,278 @@ ipcMain.handle('finance:delete', async (_event, id) => {
   }
 })
 
+// Customer Accounts IPC
+ipcMain.handle('customerAccounts:getSummary', async (_event, customerId?) => {
+  try {
+    const db = getDb()
+
+    // For a single customer, return detailed summary
+    if (customerId) {
+      const stmt = db.prepare(`
+        SELECT
+          c.id as customer_id,
+          c.name as customer_name,
+          c.type,
+          c.phone,
+          COALESCE((SELECT SUM(total) FROM weighbridge WHERE customer_id = c.id), 0) as total_weighbridge_debt,
+          (SELECT COUNT(*) FROM weighbridge WHERE customer_id = c.id) as weighbridge_transaction_count,
+          COALESCE((SELECT SUM(net_weight) FROM weighbridge WHERE customer_id = c.id), 0) as total_net_weight,
+          COALESCE((SELECT SUM(amount_paid) FROM finance WHERE customer_id = c.id), 0) as total_paid,
+          COALESCE((SELECT SUM(amount_received) FROM finance WHERE customer_id = c.id), 0) as total_received,
+          COALESCE((SELECT SUM(crates_out) FROM crates WHERE customer_id = c.id), 0) as total_crates_out,
+          COALESCE((SELECT SUM(crates_returned) FROM crates WHERE customer_id = c.id), 0) as total_crates_returned,
+          (
+            COALESCE((SELECT SUM(amount_paid) FROM finance WHERE customer_id = c.id), 0) +
+            COALESCE((SELECT SUM(total) FROM weighbridge WHERE customer_id = c.id), 0) -
+            COALESCE((SELECT SUM(amount_received) FROM finance WHERE customer_id = c.id), 0)
+          ) as net_balance,
+          (
+            COALESCE((SELECT SUM(crates_out) FROM crates WHERE customer_id = c.id), 0) -
+            COALESCE((SELECT SUM(crates_returned) FROM crates WHERE customer_id = c.id), 0)
+          ) as crate_balance
+        FROM customers c
+        WHERE c.id = ?
+      `)
+      stmt.bind([customerId])
+      const result = stmt.getAsObject() as any
+      stmt.free()
+
+      // Convert numbers from strings to actual numbers
+      if (result) {
+        result.total_weighbridge_debt = Number(result.total_weighbridge_debt) || 0
+        result.weighbridge_transaction_count = Number(result.weighbridge_transaction_count) || 0
+        result.total_net_weight = Number(result.total_net_weight) || 0
+        result.total_paid = Number(result.total_paid) || 0
+        result.total_received = Number(result.total_received) || 0
+        result.total_crates_out = Number(result.total_crates_out) || 0
+        result.total_crates_returned = Number(result.total_crates_returned) || 0
+        result.net_balance = Number(result.net_balance) || 0
+        result.crate_balance = Number(result.crate_balance) || 0
+      }
+
+      return result
+    }
+
+    // For all customers
+    const res = db.exec(`
+      SELECT
+        c.id as customer_id,
+        c.name as customer_name,
+        c.type,
+        c.phone,
+        COALESCE((SELECT SUM(total) FROM weighbridge WHERE customer_id = c.id), 0) as total_weighbridge_debt,
+        (SELECT COUNT(*) FROM weighbridge WHERE customer_id = c.id) as weighbridge_transaction_count,
+        COALESCE((SELECT SUM(net_weight) FROM weighbridge WHERE customer_id = c.id), 0) as total_net_weight,
+        COALESCE((SELECT SUM(amount_paid) FROM finance WHERE customer_id = c.id), 0) as total_paid,
+        COALESCE((SELECT SUM(amount_received) FROM finance WHERE customer_id = c.id), 0) as total_received,
+        COALESCE((SELECT SUM(crates_out) FROM crates WHERE customer_id = c.id), 0) as total_crates_out,
+        COALESCE((SELECT SUM(crates_returned) FROM crates WHERE customer_id = c.id), 0) as total_crates_returned,
+        (
+          COALESCE((SELECT SUM(amount_paid) FROM finance WHERE customer_id = c.id), 0) +
+          COALESCE((SELECT SUM(total) FROM weighbridge WHERE customer_id = c.id), 0) -
+          COALESCE((SELECT SUM(amount_received) FROM finance WHERE customer_id = c.id), 0)
+        ) as net_balance,
+        (
+          COALESCE((SELECT SUM(crates_out) FROM crates WHERE customer_id = c.id), 0) -
+          COALESCE((SELECT SUM(crates_returned) FROM crates WHERE customer_id = c.id), 0)
+        ) as crate_balance
+      FROM customers c
+      ORDER BY c.name ASC
+    `)
+
+    if (res.length === 0) return []
+
+    const columns = res[0].columns
+    return res[0].values.map((row) => {
+      const obj: any = {}
+      columns.forEach((col, i) => {
+        // Convert numeric strings to numbers
+        const value = row[i]
+        if (
+          [
+            'total_weighbridge_debt',
+            'weighbridge_transaction_count',
+            'total_net_weight',
+            'total_paid',
+            'total_received',
+            'total_crates_out',
+            'total_crates_returned',
+            'net_balance',
+            'crate_balance'
+          ].includes(col)
+        ) {
+          obj[col] = Number(value) || 0
+        } else {
+          obj[col] = value
+        }
+      })
+      return obj
+    })
+  } catch (error) {
+    console.error('Get customer accounts summary error:', error)
+    return customerId ? null : []
+  }
+})
+
+ipcMain.handle('customerAccounts:getRecentTransactions', async (_event, customerId: number, limit: number = 20) => {
+  try {
+    const db = getDb()
+    const transactions: any[] = []
+
+    // Get weighbridge transactions
+    const weighbridgeStmt = db.prepare(`
+      SELECT 'weighbridge' as type, id, date, customer_id, total as amount, notes, created_at
+      FROM weighbridge
+      WHERE customer_id = ?
+      ORDER BY date DESC, id DESC
+      LIMIT ?
+    `)
+    weighbridgeStmt.bind([customerId, limit])
+    while (weighbridgeStmt.step()) {
+      transactions.push(weighbridgeStmt.getAsObject())
+    }
+    weighbridgeStmt.free()
+
+    // Get finance transactions
+    const financeStmt = db.prepare(`
+      SELECT 'finance' as type, id, date, customer_id,
+             CASE
+               WHEN amount_paid > 0 THEN amount_paid
+               ELSE -amount_received
+             END as amount,
+             transaction_type as notes, created_at
+      FROM finance
+      WHERE customer_id = ?
+      ORDER BY date DESC, id DESC
+      LIMIT ?
+    `)
+    financeStmt.bind([customerId, limit])
+    while (financeStmt.step()) {
+      transactions.push(financeStmt.getAsObject())
+    }
+    financeStmt.free()
+
+    // Get crates transactions
+    const cratesStmt = db.prepare(`
+      SELECT 'crates' as type, id, date, customer_id,
+             (crates_out - crates_returned) as amount,
+             handler || ' - ' || notes as notes, created_at
+      FROM crates
+      WHERE customer_id = ?
+      ORDER BY date DESC, id DESC
+      LIMIT ?
+    `)
+    cratesStmt.bind([customerId, limit])
+    while (cratesStmt.step()) {
+      transactions.push(cratesStmt.getAsObject())
+    }
+    cratesStmt.free()
+
+    // Sort all by date descending
+    transactions.sort((a, b) => {
+      const dateCompare = new Date(b.date).getTime() - new Date(a.date).getTime()
+      if (dateCompare !== 0) return dateCompare
+      return b.id - a.id
+    })
+
+    return transactions.slice(0, limit)
+  } catch (error) {
+    console.error('Get recent transactions error:', error)
+    return []
+  }
+})
+
 // Security IPC
+ipcMain.handle('auth:setWebPassword', async (_event, { phone, password }) => {
+  try {
+    const result = await webAuth.updateWebPassword({ phone, newPassword: password })
+
+    if (result.success) {
+      return { success: true, message: 'تم تحديث كلمة مرور الويب بنجاح' }
+    } else {
+      return { success: false, message: result.error || 'فشل تحديث كلمة المرور' }
+    }
+  } catch (error: any) {
+    console.error('Set web password error:', error)
+    return { success: false, message: 'حدث خطأ أثناء تحديث كلمة المرور' }
+  }
+})
+
+ipcMain.handle('auth:getWebUserStatus', async () => {
+  try {
+    const registered = webAuth.isWebUserRegistered()
+    const user = webAuth.getWebUser()
+    return { success: true, registered, user }
+  } catch (error: any) {
+    console.error('Get web user status error:', error)
+    return { success: false, registered: false }
+  }
+})
+
+// Cloud Account IPC Handlers
+ipcMain.handle('cloudAccount:register', async (_event, { phone, password, factoryName }) => {
+  try {
+    const result = await webAuth.registerWebUser({
+      phone,
+      password,
+      factory_name: factoryName
+    })
+
+    if (result.success) {
+      // Enable sync after successful registration
+      sync.enableSync()
+      return { success: true, message: 'تم إنشاء الحساب وتفعيل المزامنة بنجاح' }
+    } else {
+      return { success: false, message: result.error || 'فشل إنشاء الحساب' }
+    }
+  } catch (error: any) {
+    console.error('Cloud account register error:', error)
+    return { success: false, message: error.message || 'حدث خطأ أثناء إنشاء الحساب' }
+  }
+})
+
+ipcMain.handle('cloudAccount:login', async (_event, { phone, password }) => {
+  try {
+    const result = await webAuth.loginWebUser({ phone, password })
+
+    if (result.success) {
+      // Enable sync after successful login
+      sync.enableSync()
+      return { success: true, message: 'تم تسجيل الدخول بنجاح', user: result.user }
+    } else {
+      return { success: false, message: result.error || 'فشل تسجيل الدخول' }
+    }
+  } catch (error: any) {
+    console.error('Cloud account login error:', error)
+    return { success: false, message: error.message || 'حدث خطأ أثناء تسجيل الدخول' }
+  }
+})
+
+ipcMain.handle('cloudAccount:restore', async (_event, { phone, password }) => {
+  try {
+    const result = await webAuth.restoreUserData({ phone, password })
+
+    if (result.success) {
+      return { success: true, message: result.message || 'تم استعادة البيانات بنجاح' }
+    } else {
+      return { success: false, message: result.error || 'فشل استعادة البيانات' }
+    }
+  } catch (error: any) {
+    console.error('Cloud account restore error:', error)
+    return { success: false, message: error.message || 'حدث خطأ أثناء استعادة البيانات' }
+  }
+})
+
+ipcMain.handle('cloudAccount:getStatus', async () => {
+  try {
+    const status = webAuth.getCloudAccountStatus()
+    return { success: true, ...status }
+  } catch (error: any) {
+    console.error('Get cloud account status error:', error)
+    return { success: false, isRegistered: false }
+  }
+})
+
 ipcMain.handle('auth:changePassword', async (_event, { oldPassword, newPassword }) => {
   try {
     const db = getDb()
@@ -531,12 +1032,12 @@ ipcMain.handle('auth:changePassword', async (_event, { oldPassword, newPassword 
     if (stmt.step()) {
       const user = stmt.getAsObject() as any
       stmt.free()
-      
+
       const passwordMatch = bcrypt.compareSync(oldPassword, user.password)
       if (!passwordMatch) {
         return { success: false, message: 'كلمة المرور القديمة غير صحيحة' }
       }
-      
+
       const salt = bcrypt.genSaltSync(10)
       const hash = bcrypt.hashSync(newPassword, salt)
       const updateStmt = db.prepare("UPDATE users SET password = ? WHERE username = 'admin'")
@@ -558,8 +1059,17 @@ ipcMain.handle('settings:deleteAllData', async () => {
   try {
     const db = getDb()
     // List of tables to clear
-    const tables = ['weighbridge', 'crates', 'finance', 'customers', 'date_types', 'crate_types', 'supervisors', 'daily_prices']
-    
+    const tables = [
+      'weighbridge',
+      'crates',
+      'finance',
+      'customers',
+      'date_types',
+      'crate_types',
+      'supervisors',
+      'daily_prices'
+    ]
+
     db.run('BEGIN TRANSACTION')
     try {
       for (const table of tables) {
@@ -572,7 +1082,7 @@ ipcMain.handle('settings:deleteAllData', async () => {
       db.run('ROLLBACK')
       throw err
     }
-    
+
     await saveDatabase()
     return { success: true, message: 'تم حذف كافة البيانات بنجاح' }
   } catch (error: any) {
@@ -588,7 +1098,7 @@ ipcMain.handle('settings:getAll', async () => {
     const res = db.exec('SELECT * FROM settings')
     if (res.length === 0) return {}
     const settings = {}
-    res[0].values.forEach(row => {
+    res[0].values.forEach((row) => {
       settings[row[0] as string] = row[1]
     })
     return settings
@@ -617,7 +1127,7 @@ ipcMain.handle('settings:sync', async () => {
   try {
     const db = getDb()
     const data = db.export()
-    
+
     if (!mainWindow) {
       throw new Error('Main window not found')
     }
@@ -655,16 +1165,16 @@ ipcMain.handle('settings:importDb', async () => {
 
     if (filePaths && filePaths.length > 0) {
       const data = await readFile(filePaths[0])
-      
+
       // Get the correct database path
       const dbPath = getDbPath()
-      
+
       // Write the new database file
       await writeFile(dbPath, data)
-      
+
       // Re-initialize the DB
-      await initializeDatabase(true) 
-      
+      await initializeDatabase(true)
+
       return { success: true, message: 'تم استيراد قاعدة البيانات بنجاح' }
     }
     return { success: false }
@@ -677,7 +1187,7 @@ ipcMain.handle('settings:importDb', async () => {
 ipcMain.handle('settings:importExcel', async () => {
   try {
     console.log('Main: Starting Excel import dialog...')
-    
+
     if (!mainWindow) {
       throw new Error('Main window not found')
     }
@@ -692,7 +1202,7 @@ ipcMain.handle('settings:importExcel', async () => {
       console.log('Main: File selected:', filePaths[0])
       const buffer = await readFile(filePaths[0])
       const workbook = XLSX.read(buffer, { type: 'buffer' })
-      
+
       if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
         return { success: false, message: 'الملف لا يحتوي على أوراق عمل' }
       }
@@ -710,21 +1220,43 @@ ipcMain.handle('settings:importExcel', async () => {
       let importedCount = 0
 
       console.log('Main: Starting row processing...')
-      
+
       // Start transaction for better performance
       const beginStmt = db.prepare('BEGIN TRANSACTION')
       beginStmt.run()
       beginStmt.free()
-      
+
       try {
         for (const row of data) {
           // Normalize column names (support Arabic and English)
-          const name = (row['الاسم'] || row['اسم العميل'] || row['Name'] || row['name'] || row['customer_name'] || '').toString().trim()
-          const type = (row['النوع'] || row['نوع العميل'] || row['Type'] || row['type'] || 'مورد').toString().trim()
-          const phone = (row['الهاتف'] || row['رقم الهاتف'] || row['تلفون'] || row['Phone'] || row['phone'] || '').toString().trim()
+          const name = (
+            row['الاسم'] ||
+            row['اسم العميل'] ||
+            row['Name'] ||
+            row['name'] ||
+            row['customer_name'] ||
+            ''
+          )
+            .toString()
+            .trim()
+          const type = (row['النوع'] || row['نوع العميل'] || row['Type'] || row['type'] || 'مورد')
+            .toString()
+            .trim()
+          const phone = (
+            row['الهاتف'] ||
+            row['رقم الهاتف'] ||
+            row['تلفون'] ||
+            row['Phone'] ||
+            row['phone'] ||
+            ''
+          )
+            .toString()
+            .trim()
 
           if (name) {
-            const stmt = db.prepare('INSERT OR IGNORE INTO customers (name, type, phone) VALUES (?, ?, ?)')
+            const stmt = db.prepare(
+              'INSERT OR IGNORE INTO customers (name, type, phone) VALUES (?, ?, ?)'
+            )
             stmt.bind([name, type, phone])
             stmt.run()
             stmt.free()
@@ -743,6 +1275,13 @@ ipcMain.handle('settings:importExcel', async () => {
 
       await saveDatabase()
       console.log(`Main: Successfully imported ${importedCount} customers`)
+
+      // Send bulk update notification
+      mainWindow?.webContents.send('customerAccounts:bulkUpdate', {
+        count: importedCount,
+        timestamp: Date.now()
+      })
+
       return { success: true, message: `تم استيراد ${importedCount} عميل بنجاح` }
     }
     console.log('Main: Import cancelled by user')
@@ -769,7 +1308,7 @@ ipcMain.handle('reports:exportExcel', async (_event, { title, data }) => {
       const worksheet = XLSX.utils.json_to_sheet(data)
       const workbook = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Report')
-      
+
       const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' })
       await writeFile(filePath, buffer)
       return { success: true }
@@ -800,11 +1339,11 @@ ipcMain.handle('telegram:send', async (_event, { token, chatId, message }) => {
 ipcMain.handle('telegram:sendReport', async () => {
   try {
     const db = getDb()
-    
+
     const settings = db.exec('SELECT * FROM settings')
     const telegramSettings: Record<string, string> = {}
     if (settings.length > 0) {
-      settings[0].values.forEach(row => {
+      settings[0].values.forEach((row) => {
         telegramSettings[row[0] as string] = row[1] as string
       })
     }
@@ -861,11 +1400,12 @@ ipcMain.handle('license:activate', async (_event, { licenseKey, factoryName }) =
 })
 
 ipcMain.handle('license:check', async () => {
-  return licenseManager.isLicensed()
+  return await licenseManager.isLicensed()
 })
 
 ipcMain.handle('license:openTrialRequest', async () => {
-  const TRIAL_REQUEST_URL = process.env.TRIAL_REQUEST_URL || 'https://dates-factory.vercel.app/trial'
+  const TRIAL_REQUEST_URL =
+    process.env.TRIAL_REQUEST_URL || 'https://dates-factory-manager-cloud.vercel.app/trial'
   shell.openExternal(TRIAL_REQUEST_URL)
   return { success: true }
 })
@@ -1029,6 +1569,337 @@ ipcMain.handle('duplicates:autoClean', async () => {
   } catch (error: any) {
     console.error('Auto clean duplicates error:', error)
     return { success: false, message: error.message }
+  }
+})
+
+// Telegram Bot IPC Handlers
+ipcMain.handle('telegram:startBot', async () => {
+  return startTelegramBot()
+})
+
+ipcMain.handle('telegram:stopBot', async () => {
+  return stopTelegramBot()
+})
+
+ipcMain.handle('telegram:restartBot', async () => {
+  return restartTelegramBot()
+})
+
+ipcMain.handle('telegram:testConnection', async (_event, token?) => {
+  return testBotConnection(token)
+})
+
+ipcMain.handle('telegram:getStats', async () => {
+  return getBotStats()
+})
+
+// Telegram Users IPC
+ipcMain.handle('telegram:getUsers', async (_event, filters) => {
+  try {
+    const db = getDb()
+    let query = `
+      SELECT tu.*, ur.role
+      FROM telegram_users tu
+      LEFT JOIN user_roles ur ON tu.user_id = ur.user_id
+    `
+    const params: any[] = []
+    const conditions: string[] = []
+
+    if (filters?.status) {
+      conditions.push('tu.status = ?')
+      params.push(filters.status)
+    }
+
+    if (filters?.role) {
+      conditions.push('ur.role = ?')
+      params.push(filters.role)
+    }
+
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND ')
+    }
+
+    query += ' ORDER BY tu.registration_date DESC'
+
+    if (filters?.limit) {
+      query += ' LIMIT ?'
+      params.push(filters.limit)
+      if (filters?.offset) {
+        query += ' OFFSET ?'
+        params.push(filters.offset)
+      }
+    }
+
+    const stmt = db.prepare(query)
+    params.forEach((param) => stmt.bind([param]))
+
+    const users: any[] = []
+    while (stmt.step()) {
+      users.push(stmt.getAsObject())
+    }
+    stmt.free()
+
+    return { success: true, data: users }
+  } catch (error: any) {
+    console.error('Get telegram users error:', error)
+    return { success: false, message: error.message || 'Failed to get users' }
+  }
+})
+
+ipcMain.handle('telegram:updateUser', async (_event, telegramId, data) => {
+  try {
+    const db = getDb()
+    const updates: string[] = []
+    const params: any[] = []
+
+    if (data.status !== undefined) {
+      updates.push('status = ?')
+      params.push(data.status)
+    }
+
+    if (data.role !== undefined) {
+      // Update role in user_roles table
+      const getUserIdStmt = db.prepare('SELECT user_id FROM telegram_users WHERE telegram_id = ?')
+      getUserIdStmt.bind([telegramId])
+      getUserIdStmt.step()
+      const userIdResult = getUserIdStmt.getAsObject() as any
+      getUserIdStmt.free()
+
+      if (userIdResult?.user_id) {
+        // Check if role exists
+        const checkRoleStmt = db.prepare('SELECT * FROM user_roles WHERE user_id = ?')
+        checkRoleStmt.bind([userIdResult.user_id])
+        if (checkRoleStmt.step()) {
+          const updateRoleStmt = db.prepare('UPDATE user_roles SET role = ? WHERE user_id = ?')
+          updateRoleStmt.bind([data.role, userIdResult.user_id])
+          updateRoleStmt.run()
+          updateRoleStmt.free()
+        } else {
+          const insertRoleStmt = db.prepare('INSERT INTO user_roles (user_id, role) VALUES (?, ?)')
+          insertRoleStmt.bind([userIdResult.user_id, data.role])
+          insertRoleStmt.run()
+          insertRoleStmt.free()
+        }
+        checkRoleStmt.free()
+      }
+    }
+
+    if (updates.length > 0) {
+      params.push(telegramId)
+      const stmt = db.prepare(
+        `UPDATE telegram_users SET ${updates.join(', ')} WHERE telegram_id = ?`
+      )
+      stmt.bind(params)
+      stmt.run()
+      stmt.free()
+    }
+
+    await saveDatabase()
+    return { success: true }
+  } catch (error: any) {
+    console.error('Update telegram user error:', error)
+    return { success: false, message: error.message || 'Failed to update user' }
+  }
+})
+
+ipcMain.handle('telegram:deleteUser', async (_event, telegramId) => {
+  try {
+    const db = getDb()
+
+    // Delete user roles
+    const deleteRoleStmt = db.prepare(`
+      DELETE FROM user_roles
+      WHERE user_id IN (SELECT user_id FROM telegram_users WHERE telegram_id = ?)
+    `)
+    deleteRoleStmt.bind([telegramId])
+    deleteRoleStmt.run()
+    deleteRoleStmt.free()
+
+    // Delete notifications
+    const deleteNotifStmt = db.prepare('DELETE FROM notification_queue WHERE telegram_id = ?')
+    deleteNotifStmt.bind([telegramId])
+    deleteNotifStmt.run()
+    deleteNotifStmt.free()
+
+    // Delete preferences
+    const deletePrefStmt = db.prepare('DELETE FROM notification_preferences WHERE telegram_id = ?')
+    deletePrefStmt.bind([telegramId])
+    deletePrefStmt.run()
+    deletePrefStmt.free()
+
+    // Delete user
+    const deleteStmt = db.prepare('DELETE FROM telegram_users WHERE telegram_id = ?')
+    deleteStmt.bind([telegramId])
+    deleteStmt.run()
+    deleteStmt.free()
+
+    await saveDatabase()
+    return { success: true }
+  } catch (error: any) {
+    console.error('Delete telegram user error:', error)
+    return { success: false, message: error.message || 'Failed to delete user' }
+  }
+})
+
+// Telegram Registrations IPC
+ipcMain.handle('telegram:getRegistrations', async (_event, filters) => {
+  try {
+
+    const handler = getRegistrationHandler()
+    const registrations = await handler.getRegistrations(filters)
+    return { success: true, data: registrations }
+  } catch (error: any) {
+    console.error('Get registrations error:', error)
+    return { success: false, message: error.message || 'Failed to get registrations' }
+  }
+})
+
+ipcMain.handle(
+  'telegram:approveRegistration',
+  async (_event, registrationId, role, reviewerUserId) => {
+    try {
+  
+      const handler = getRegistrationHandler()
+      const result = await handler.approveRegistration(registrationId, role, reviewerUserId)
+      return result
+    } catch (error: any) {
+      console.error('Approve registration error:', error)
+      return { success: false, message: error.message || 'Failed to approve registration' }
+    }
+  }
+)
+
+ipcMain.handle(
+  'telegram:rejectRegistration',
+  async (_event, registrationId, reason, reviewerUserId) => {
+    try {
+  
+      const handler = getRegistrationHandler()
+      const result = await handler.rejectRegistration(registrationId, reason, reviewerUserId)
+      return result
+    } catch (error: any) {
+      console.error('Reject registration error:', error)
+      return { success: false, message: error.message || 'Failed to reject registration' }
+    }
+  }
+)
+
+// Sync IPC Handlers
+ipcMain.handle('sync:getStatus', async () => {
+  try {
+    const status = await sync.getSyncStatus()
+    return { success: true, data: status }
+  } catch (error: any) {
+    console.error('Get sync status error:', error)
+    return { success: false, message: error.message || 'Failed to get sync status' }
+  }
+})
+
+ipcMain.handle('sync:manualSync', async () => {
+  try {
+    const result = await sync.manualSync()
+    return { success: true, data: result }
+  } catch (error: any) {
+    console.error('Manual sync error:', error)
+    return { success: false, message: error.message || 'Sync failed' }
+  }
+})
+
+ipcMain.handle('sync:enable', async () => {
+  try {
+    await sync.enableSync()
+    return { success: true }
+  } catch (error: any) {
+    console.error('Enable sync error:', error)
+    return { success: false, message: error.message || 'Failed to enable sync' }
+  }
+})
+
+ipcMain.handle('sync:disable', async () => {
+  try {
+    sync.disableSync()
+    return { success: true }
+  } catch (error: any) {
+    console.error('Disable sync error:', error)
+    return { success: false, message: error.message || 'Failed to disable sync' }
+  }
+})
+
+ipcMain.handle('sync:getConflicts', async (_event, limit) => {
+  try {
+    const conflicts = await syncConflict.getRecentConflicts(limit || 50)
+    return { success: true, data: conflicts }
+  } catch (error: any) {
+    console.error('Get conflicts error:', error)
+    return { success: false, message: error.message || 'Failed to get conflicts' }
+  }
+})
+
+ipcMain.handle('sync:clearConflicts', async () => {
+  try {
+    return await syncConflict.clearOldConflicts()
+  } catch (error: any) {
+    console.error('Clear conflicts error:', error)
+    return { success: false, message: error.message || 'Failed to clear conflicts' }
+  }
+})
+
+ipcMain.handle('sync:clearOldConflicts', async (_event, olderThanDays) => {
+  try {
+    const cleared = await syncConflict.clearOldConflicts(olderThanDays || 90)
+    return { success: true, data: { cleared } }
+  } catch (error: any) {
+    console.error('Clear conflicts error:', error)
+    return { success: false, message: error.message || 'Failed to clear conflicts' }
+  }
+})
+
+// Print IPC Handler - Open print preview dialog
+ipcMain.handle('app:print', async () => {
+  try {
+    if (!mainWindow) {
+      return { success: false, message: 'No window available' }
+    }
+
+    // Execute print in the renderer process
+    await mainWindow.webContents.executeJavaScript(`
+      // Add print styles before printing
+      const printStyle = document.createElement('style');
+      printStyle.textContent = \`
+        @media print {
+          body * { visibility: hidden; }
+          .print\\:block, .print\\:flex, .print\\:hidden { visibility: visible !important; }
+          .print\\:block { display: block !important; }
+          .print\\:flex { display: flex !important; }
+          .no-print { display: none !important; }
+
+          /* Show only printable content */
+          #root > div > *:not(:has(.print\\\\:block)) { display: none; }
+
+          /* Make sure print elements are visible */
+          .print\\\\:block, .print\\\\:flex {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+        }
+      \`;
+      document.head.appendChild(printStyle);
+
+      // Trigger print
+      window.print();
+
+      // Remove style after print dialog closes
+      setTimeout(() => {
+        document.head.removeChild(printStyle);
+      }, 1000);
+    `)
+
+    return { success: true }
+  } catch (error: any) {
+    console.error('Print error:', error)
+    return { success: false, message: error.message || 'Failed to print' }
   }
 })
 

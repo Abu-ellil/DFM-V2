@@ -12,9 +12,14 @@ interface CustomerStore {
   customers: Customer[]
   isLoading: boolean
   fetchCustomers: () => Promise<void>
-  addCustomer: (customer: Omit<Customer, 'id' | 'created_at'>) => Promise<{ success: boolean, message?: string }>
-  updateCustomer: (id: number, customer: Omit<Customer, 'id' | 'created_at'>) => Promise<{ success: boolean, message?: string }>
-  deleteCustomer: (id: number) => Promise<{ success: boolean, message?: string }>
+  addCustomer: (
+    customer: Omit<Customer, 'id' | 'created_at'>
+  ) => Promise<{ success: boolean; message?: string }>
+  updateCustomer: (
+    id: number,
+    customer: Omit<Customer, 'id' | 'created_at'>
+  ) => Promise<{ success: boolean; message?: string }>
+  deleteCustomer: (id: number) => Promise<{ success: boolean; message?: string }>
 }
 
 export const useCustomerStore = create<CustomerStore>((set) => ({

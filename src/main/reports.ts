@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as XLSX from 'xlsx'
 import { Database } from 'sql.js'
 import TelegramBot from 'node-telegram-bot-api'
@@ -30,13 +31,14 @@ interface ReportSummary {
 
 export function generateReportData(db: Database): ReportData {
   const customers = db.exec('SELECT * FROM customers ORDER BY created_at DESC LIMIT 50')
-  const customersData = customers.length > 0 
-    ? customers[0].values.map(row => {
-        const obj: any = {}
-        customers[0].columns.forEach((col, i) => obj[col] = row[i])
-        return obj
-      })
-    : []
+  const customersData =
+    customers.length > 0
+      ? customers[0].values.map((row) => {
+          const obj: any = {}
+          customers[0].columns.forEach((col, i) => (obj[col] = row[i]))
+          return obj
+        })
+      : []
 
   const weighbridge = db.exec(`
     SELECT w.*, c.name as customer_name, dt.name as date_type_name 
@@ -46,13 +48,14 @@ export function generateReportData(db: Database): ReportData {
     ORDER BY w.date DESC, w.id DESC
     LIMIT 50
   `)
-  const weighbridgeData = weighbridge.length > 0
-    ? weighbridge[0].values.map(row => {
-        const obj: any = {}
-        weighbridge[0].columns.forEach((col, i) => obj[col] = row[i])
-        return obj
-      })
-    : []
+  const weighbridgeData =
+    weighbridge.length > 0
+      ? weighbridge[0].values.map((row) => {
+          const obj: any = {}
+          weighbridge[0].columns.forEach((col, i) => (obj[col] = row[i]))
+          return obj
+        })
+      : []
 
   const crates = db.exec(`
     SELECT cr.*, c.name as customer_name, ct.name as crate_type_name
@@ -62,13 +65,14 @@ export function generateReportData(db: Database): ReportData {
     ORDER BY cr.date DESC, cr.id DESC
     LIMIT 50
   `)
-  const cratesData = crates.length > 0
-    ? crates[0].values.map(row => {
-        const obj: any = {}
-        crates[0].columns.forEach((col, i) => obj[col] = row[i])
-        return obj
-      })
-    : []
+  const cratesData =
+    crates.length > 0
+      ? crates[0].values.map((row) => {
+          const obj: any = {}
+          crates[0].columns.forEach((col, i) => (obj[col] = row[i]))
+          return obj
+        })
+      : []
 
   const finance = db.exec(`
     SELECT f.*, c.name as customer_name
@@ -77,18 +81,19 @@ export function generateReportData(db: Database): ReportData {
     ORDER BY f.date DESC, f.id DESC
     LIMIT 50
   `)
-  const financeData = finance.length > 0
-    ? finance[0].values.map(row => {
-        const obj: any = {}
-        finance[0].columns.forEach((col, i) => obj[col] = row[i])
-        return obj
-      })
-    : []
+  const financeData =
+    finance.length > 0
+      ? finance[0].values.map((row) => {
+          const obj: any = {}
+          finance[0].columns.forEach((col, i) => (obj[col] = row[i]))
+          return obj
+        })
+      : []
 
   const settingsRes = db.exec('SELECT * FROM settings')
   const settings: Record<string, string> = {}
   if (settingsRes.length > 0) {
-    settingsRes[0].values.forEach(row => {
+    settingsRes[0].values.forEach((row) => {
       settings[row[0] as string] = row[1] as string
     })
   }
@@ -106,35 +111,40 @@ export function generateReportSummary(db: Database): ReportSummary {
   const today = new Date().toISOString().split('T')[0]
 
   const customers = db.exec('SELECT * FROM customers')
-  const customersList = customers.length > 0
-    ? customers[0].values.map(row => {
-        const obj: any = {}
-        customers[0].columns.forEach((col, i) => obj[col] = row[i])
-        return obj
-      })
-    : []
+  const customersList =
+    customers.length > 0
+      ? customers[0].values.map((row) => {
+          const obj: any = {}
+          customers[0].columns.forEach((col, i) => (obj[col] = row[i]))
+          return obj
+        })
+      : []
 
-  const suppliers = customersList.filter(c => c.type === 'مورد').length
-  const traders = customersList.filter(c => c.type === 'تاجر').length
-  const factories = customersList.filter(c => c.type === 'مصنع').length
+  const suppliers = customersList.filter((c) => c.type === 'مورد').length
+  const traders = customersList.filter((c) => c.type === 'تاجر').length
+  const factories = customersList.filter((c) => c.type === 'مصنع').length
 
   const todayWeighbridge = db.exec(`SELECT COUNT(*) as count FROM weighbridge WHERE date = ?`)
-  const todayWeighbridgeCount = todayWeighbridge.length > 0 ? todayWeighbridge[0].values[0][0] as number : 0
+  const todayWeighbridgeCount =
+    todayWeighbridge.length > 0 ? (todayWeighbridge[0].values[0][0] as number) : 0
 
-  const todayCrates = db.exec(`SELECT SUM(crates_out) as out, SUM(crates_returned) as returned FROM crates WHERE date = ?`)
+  const todayCrates = db.exec(
+    `SELECT SUM(crates_out) as out, SUM(crates_returned) as returned FROM crates WHERE date = ?`
+  )
   const todayCratesData = todayCrates.length > 0 ? todayCrates[0].values[0] : [0, 0]
 
   const todayFinance = db.exec(`SELECT COUNT(*) as count FROM finance WHERE date = ?`)
-  const todayFinanceCount = todayFinance.length > 0 ? todayFinance[0].values[0][0] as number : 0
+  const todayFinanceCount = todayFinance.length > 0 ? (todayFinance[0].values[0][0] as number) : 0
 
   const recentCustomers = db.exec('SELECT * FROM customers ORDER BY created_at DESC LIMIT 10')
-  const recentCustomersData = recentCustomers.length > 0
-    ? recentCustomers[0].values.map(row => {
-        const obj: any = {}
-        recentCustomers[0].columns.forEach((col, i) => obj[col] = row[i])
-        return obj
-      })
-    : []
+  const recentCustomersData =
+    recentCustomers.length > 0
+      ? recentCustomers[0].values.map((row) => {
+          const obj: any = {}
+          recentCustomers[0].columns.forEach((col, i) => (obj[col] = row[i]))
+          return obj
+        })
+      : []
 
   const recentTransactions = db.exec(`
     SELECT 'weighbridge' as type, id, date, customer_name, total as amount 
@@ -150,13 +160,14 @@ export function generateReportSummary(db: Database): ReportSummary {
     ORDER BY date DESC
     LIMIT 20
   `)
-  const recentTransactionsData = recentTransactions.length > 0
-    ? recentTransactions[0].values.map(row => {
-        const obj: any = {}
-        recentTransactions[0].columns.forEach((col, i) => obj[col] = row[i])
-        return obj
-      })
-    : []
+  const recentTransactionsData =
+    recentTransactions.length > 0
+      ? recentTransactions[0].values.map((row) => {
+          const obj: any = {}
+          recentTransactions[0].columns.forEach((col, i) => (obj[col] = row[i]))
+          return obj
+        })
+      : []
 
   return {
     report_date: today,
@@ -168,8 +179,8 @@ export function generateReportSummary(db: Database): ReportSummary {
     },
     today: {
       weighbridge_transactions: todayWeighbridgeCount,
-      crates_out: todayCratesData[0] as number || 0,
-      crates_returned: todayCratesData[1] as number || 0,
+      crates_out: (todayCratesData[0] as number) || 0,
+      crates_returned: (todayCratesData[1] as number) || 0,
       financial_transactions: todayFinanceCount
     },
     recent_customers: recentCustomersData,
@@ -206,7 +217,7 @@ export function generateExcelReport(reportData: ReportData, summary: ReportSumma
 
   if (reportData.customers.length > 0) {
     const customersHeader = [['المعرف', 'الاسم', 'النوع', 'الهاتف', 'تاريخ الإضافة']]
-    const customersRows = reportData.customers.map(c => [
+    const customersRows = reportData.customers.map((c) => [
       c.id,
       c.name,
       c.type,
@@ -218,8 +229,22 @@ export function generateExcelReport(reportData: ReportData, summary: ReportSumma
   }
 
   if (reportData.weighbridge.length > 0) {
-    const weighbridgeHeader = [['المعرف', 'التاريخ', 'العميل', 'نوع التمر', 'الوزن الإجمالي', 'الوزن الصافي', 'السعر/قنطار', 'الإجمالي', 'عدد الصناديق', 'العمولة', 'ملاحظات']]
-    const weighbridgeRows = reportData.weighbridge.map(w => [
+    const weighbridgeHeader = [
+      [
+        'المعرف',
+        'التاريخ',
+        'العميل',
+        'نوع التمر',
+        'الوزن الإجمالي',
+        'الوزن الصافي',
+        'السعر/قنطار',
+        'الإجمالي',
+        'عدد الصناديق',
+        'العمولة',
+        'ملاحظات'
+      ]
+    ]
+    const weighbridgeRows = reportData.weighbridge.map((w) => [
       w.id,
       w.date,
       w.customer_name,
@@ -237,8 +262,10 @@ export function generateExcelReport(reportData: ReportData, summary: ReportSumma
   }
 
   if (reportData.crates.length > 0) {
-    const cratesHeader = [['المعرف', 'التاريخ', 'العميل', 'نوع الصندوق', 'صادرة', 'مرتجعة', 'المسؤول', 'ملاحظات']]
-    const cratesRows = reportData.crates.map(c => [
+    const cratesHeader = [
+      ['المعرف', 'التاريخ', 'العميل', 'نوع الصندوق', 'صادرة', 'مرتجعة', 'المسؤول', 'ملاحظات']
+    ]
+    const cratesRows = reportData.crates.map((c) => [
       c.id,
       c.date,
       c.customer_name,
@@ -253,8 +280,10 @@ export function generateExcelReport(reportData: ReportData, summary: ReportSumma
   }
 
   if (reportData.finance.length > 0) {
-    const financeHeader = [['المعرف', 'التاريخ', 'العميل', 'نوع المعاملة', 'مدفوع', 'مستلم', 'ملاحظات']]
-    const financeRows = reportData.finance.map(f => [
+    const financeHeader = [
+      ['المعرف', 'التاريخ', 'العميل', 'نوع المعاملة', 'مدفوع', 'مستلم', 'ملاحظات']
+    ]
+    const financeRows = reportData.finance.map((f) => [
       f.id,
       f.date,
       f.customer_name,

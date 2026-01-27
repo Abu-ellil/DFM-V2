@@ -9,6 +9,7 @@ interface Settings {
   company_logo: string
   telegram_token: string
   telegram_chat_id: string
+  telegram_bot_enabled: string
 }
 
 interface SettingsStore {
@@ -27,7 +28,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     company_phone: '',
     company_logo: '',
     telegram_token: '',
-    telegram_chat_id: ''
+    telegram_chat_id: '',
+    telegram_bot_enabled: '0'
   },
   isLoading: false,
   fetchSettings: async () => {
@@ -49,7 +51,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         }))
       }
       return result
-    } catch (error) {
+    } catch {
       return { success: false }
     }
   }
