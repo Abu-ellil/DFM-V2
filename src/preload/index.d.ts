@@ -160,6 +160,13 @@ declare global {
           factoryName?: string
         }>
       }
+      autoUpdater: {
+        check: () => Promise<{ success: boolean; message?: string }>
+        download: () => Promise<{ success: boolean; message?: string }>
+        installAndRestart: () => Promise<{ success: boolean }>
+        getVersion: () => Promise<{ current: string; isDev: boolean }>
+      }
+      invoke: (channel: string, ...args: any[]) => Promise<any>
       print: () => Promise<{ success: boolean; message?: string }>
       on?: (channel: string, callback: (...args: any[]) => void) => void
       removeListener?: (channel: string, callback: (...args: any[]) => void) => void

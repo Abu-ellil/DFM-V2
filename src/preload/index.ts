@@ -115,6 +115,13 @@ const api = {
       ipcRenderer.invoke('cloudAccount:restore', data),
     getStatus: () => ipcRenderer.invoke('cloudAccount:getStatus')
   },
+  autoUpdater: {
+    check: () => ipcRenderer.invoke('autoUpdater:check'),
+    download: () => ipcRenderer.invoke('autoUpdater:download'),
+    installAndRestart: () => ipcRenderer.invoke('autoUpdater:installAndRestart'),
+    getVersion: () => ipcRenderer.invoke('autoUpdater:getVersion')
+  },
+  invoke: (channel: string, ...args: any[]) => ipcRenderer.invoke(channel, ...args),
   print: () => ipcRenderer.invoke('app:print'),
   on: (channel, callback) => {
     ipcRenderer.on(channel, (_event, ...args) => callback(...args))

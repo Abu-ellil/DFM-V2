@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog, autoUpdater } from 'electron'
 import { join } from 'path'
 import { writeFile, readFile } from 'fs/promises'
 import * as XLSX from 'xlsx'
@@ -31,9 +31,159 @@ import * as licenseManager from './license'
 import * as sync from './sync'
 import { getRegistrationHandler } from './telegram/handlers/registration'
 
+// Auto-updater configuration
+const UPDATE_CHECK_INTERVAL = 4 * 60 * 60 * 1000 // Check every 4 hours
+let updateCheckTimer: NodeJS.Timeout | null = null
+
 let mainWindow: BrowserWindow | null = null
 
+// Configure auto-updater
+function configureAutoUpdater(): void {
+  // Only check for updates in production
+  if (is.dev) {
+    console.log('Auto-updater disabled in development')
+    return
+  }
+
+  const owner = 'Abu-ellil'
+  const repo = 'DFM-V2'
+
+  autoUpdater.setFeedURL({
+    owner: owner,
+    repo: repo
+  } as any)
+
+  ;(autoUpdater as any).autoDownload = true
+  ;(autoUpdater as any).autoInstallOnAppQuit = true
+
+  // Auto-updater event handlers
+  autoUpdater.on('checking-for-update', () => {
+    console.log('Checking for updates...')
+    sendUpdateStatusToRenderer('checking', { message: 'جاري التحقق من التحديثات...' })
+  })
+
+  autoUpdater.on('update-available' as any, (info: any) => {
+    console.log('Update available:', info)
+    sendUpdateStatusToRenderer('available', {
+      version: (info as any).version,
+      releaseDate: (info as any).releaseDate,
+      message: `يتوفر إصدار جديد ${(info as any).version}`
+    })
+  })
+
+  autoUpdater.on('update-not-available' as any, (info: any) => {
+    console.log('Update not available:', info)
+    sendUpdateStatusToRenderer('not-available', {
+      version: (info as any).version,
+      message: 'أنت تستخدم أحدث إصدار'
+    })
+  })
+
+  autoUpdater.on('error', (err: any) => {
+    console.error('Update error:', err)
+    sendUpdateStatusToRenderer('error', {
+      message: 'حدث خطأ أثناء التحقق من التحديثات'
+    })
+  })
+
+  autoUpdater.on('download-progress' as any, (progress: any) => {
+    console.log('Download progress:', progress)
+    sendUpdateStatusToRenderer('downloading', {
+      percent: Math.floor(progress.percent),
+      transferred: Math.floor(progress.transferred / 1024 / 1024),
+      total: Math.floor(progress.total / 1024 / 1024),
+      speed: Math.floor(progress.bytesPerSecond / 1024 / 1024),
+      message: `جاري تحميل التحديث ${Math.floor(progress.percent)}%`
+    })
+  })
+
+  autoUpdater.on('update-downloaded' as any, (info: any) => {
+    console.log('Update downloaded:', info)
+    sendUpdateStatusToRenderer('downloaded', {
+      version: (info as any).version,
+      message: `تم تحميل الإصدار ${(info as any).version}. سيتم التثبيت عند إغلاق التطبيق`,
+      restartNow: true
+    })
+  })
+}
+
+// Send update status to renderer process
+function sendUpdateStatusToRenderer(status: string, data: any = {}): void {
+  if (mainWindow) {
+    mainWindow.webContents.send('autoUpdater:event', { status, ...data })
+  }
+}
+
+// Check for updates manually
+async function checkForUpdates(): Promise<{ success: boolean; data?: any; message?: string }> {
+  try {
+    if (is.dev) {
+      return { success: false, message: 'التحديثات غير متاحة في وضع التطوير' }
+    }
+
+    await autoUpdater.checkForUpdates()
+    return { success: true, message: 'جاري التحقق من التحديثات...' }
+  } catch (error: any) {
+    console.error('Check for updates error:', error)
+    return { success: false, message: error.message || 'فشل التحقق من التحديثات' }
+  }
+}
+
+// Download and install update
+async function downloadUpdate(): Promise<{ success: boolean; message?: string }> {
+  try {
+    if (is.dev) {
+      return { success: false, message: 'التحديثات غير متاحة في وضع التطوير' }
+    }
+
+    await (autoUpdater as any).downloadUpdate()
+    return { success: true, message: 'جاري تحميل التحديث...' }
+  } catch (error: any) {
+    console.error('Download update error:', error)
+    return { success: false, message: error.message || 'فشل تحميل التحديث' }
+  }
+}
+
+// Install update and restart
+function installUpdateAndRestart(): void {
+  if (is.dev) {
+    return
+  }
+  autoUpdater.quitAndInstall()
+}
+
+// Start periodic update checks
+function startPeriodicUpdateChecks(): void {
+  if (is.dev || updateCheckTimer) {
+    return
+  }
+
+  // Initial check after 30 seconds
+  setTimeout(() => {
+    checkForUpdates()
+  }, 30000)
+
+  // Then check every 4 hours
+  updateCheckTimer = setInterval(() => {
+    checkForUpdates()
+  }, UPDATE_CHECK_INTERVAL)
+
+  console.log('Periodic update checks started')
+}
+
+// Stop periodic update checks
+function stopPeriodicUpdateChecks(): void {
+  if (updateCheckTimer) {
+    clearInterval(updateCheckTimer)
+    updateCheckTimer = null
+    console.log('Periodic update checks stopped')
+  }
+}
+
 async function createWindow(): Promise<void> {
+  // Configure auto-updater
+  configureAutoUpdater()
+
   // Initialize Database
   try {
     await initializeDatabase()
@@ -1909,6 +2059,27 @@ ipcMain.handle('app:print', async () => {
   }
 })
 
+// Auto-update IPC handlers
+ipcMain.handle('autoUpdater:check', async () => {
+  return await checkForUpdates()
+})
+
+ipcMain.handle('autoUpdater:download', async () => {
+  return await downloadUpdate()
+})
+
+ipcMain.handle('autoUpdater:installAndRestart', () => {
+  installUpdateAndRestart()
+  return { success: true }
+})
+
+ipcMain.handle('autoUpdater:getVersion', () => {
+  return {
+    current: app.getVersion(),
+    isDev: is.dev
+  }
+})
+
 // This method will be called when Electron has finished
 app.whenReady().then(() => {
   // Set app user model id for windows
@@ -1920,6 +2091,9 @@ app.whenReady().then(() => {
   })
 
   createWindow()
+
+  // Start periodic update checks
+  startPeriodicUpdateChecks()
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -1933,6 +2107,11 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+app.on('before-quit', () => {
+  // Stop periodic update checks before quitting
+  stopPeriodicUpdateChecks()
 })
 
 // In this file you can include the rest of your app's specific main process

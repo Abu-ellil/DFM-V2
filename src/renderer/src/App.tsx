@@ -15,6 +15,7 @@ import Settings from './components/Settings'
 import Duplicates from './components/Duplicates'
 import CustomerDetails from './components/CustomerDetails'
 import { SyncStatus } from './components/SyncStatus'
+import AutoUpdater from './components/AutoUpdater'
 import {
   LayoutDashboard,
   Users,
@@ -284,6 +285,7 @@ function App() {
         </div>
       </main>
       <ToastContainer position="bottom-right" theme="colored" rtl />
+      <AutoUpdater />
     </div>
   )
 }
