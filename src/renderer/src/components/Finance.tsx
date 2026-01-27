@@ -14,10 +14,15 @@ import {
   Plus,
   X,
   Edit2,
-  Trash2
+  Trash2,
+  Receipt,
+  FileImage,
+  FileText
 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { formatCurrency } from '../utils/format'
+
+type PaymentMethod = 'نقدا' | 'تحويل بنكي' | 'مصروفات ومشتريات'
 
 export default function Finance() {
   const {
@@ -42,13 +47,104 @@ export default function Finance() {
     transaction_type: 'مقبوض',
     amount_paid: 0,
     amount_received: 0,
+    payment_method: 'نقدا' as PaymentMethod,
+    receipt_file: '',
+    receipt_reference: '',
     notes: ''
   })
+
+  // State for receipt file handling in Add modal
+  const [addReceiptFile, setAddReceiptFile] = useState<string | null>(null)
+  const [addReceiptReference, setAddReceiptReference] = useState('')
+  const [showAddReceiptPreview, setShowAddReceiptPreview] = useState(false)
+
+  // State for receipt file handling in Edit modal
+  const [editReceiptFile, setEditReceiptFile] = useState<string | null>(null)
+  const [editReceiptReference, setEditReceiptReference] = useState('')
+  const [showEditReceiptPreview, setShowEditReceiptPreview] = useState(false)
 
   useEffect(() => {
     fetchFinance()
     fetchCustomers()
   }, [])
+
+  // Reset edit receipt states when edit modal closes
+  useEffect(() => {
+    if (!isEditModalOpen) {
+      setEditReceiptFile(null)
+      setEditReceiptReference('')
+      setShowEditReceiptPreview(false)
+    }
+  }, [isEditModalOpen])
+
+  // Handle receipt file upload for Add modal
+  const handleAddReceiptUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf']
+      if (!validTypes.includes(file.type)) {
+        toast.error('يرجى اختيار ملف صورة أو PDF فقط')
+        return
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('حجم الملف يجب أن يكون أقل من 5 ميجابايت')
+        return
+      }
+
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        const base64String = reader.result as string
+        setAddReceiptFile(base64String)
+        setShowAddReceiptPreview(true)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  // Handle removing receipt for Add modal
+  const handleRemoveAddReceipt = () => {
+    setAddReceiptFile(null)
+    setAddReceiptReference('')
+    setShowAddReceiptPreview(false)
+  }
+
+  // Handle receipt file upload for Edit modal
+  const handleEditReceiptUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf']
+      if (!validTypes.includes(file.type)) {
+        toast.error('يرجى اختيار ملف صورة أو PDF فقط')
+        return
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('حجم الملف يجب أن يكون أقل من 5 ميجابايت')
+        return
+      }
+
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        const base64String = reader.result as string
+        setEditReceiptFile(base64String)
+        setShowEditReceiptPreview(true)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  // Handle removing receipt for Edit modal
+  const handleRemoveEditReceipt = () => {
+    setEditReceiptFile(null)
+    setEditReceiptReference('')
+    setEditingTransaction({ ...editingTransaction, receipt_file: null })
+    setShowEditReceiptPreview(false)
+  }
 
   const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -57,7 +153,13 @@ export default function Finance() {
       return
     }
 
-    const result = await addTransaction(newTransaction)
+    const transactionToSubmit = {
+      ...newTransaction,
+      receipt_file: addReceiptFile || null,
+      receipt_reference: addReceiptReference || null
+    }
+
+    const result = await addTransaction(transactionToSubmit)
     if (result.success) {
       toast.success('تم إضافة العملية بنجاح')
       setIsModalOpen(false)
@@ -67,8 +169,13 @@ export default function Finance() {
         transaction_type: 'مقبوض',
         amount_paid: 0,
         amount_received: 0,
+        payment_method: 'نقدا' as PaymentMethod,
+        receipt_file: '',
+        receipt_reference: '',
         notes: ''
       })
+      // Reset receipt states
+      handleRemoveAddReceipt()
     } else {
       toast.error(result.message || 'حدث خطأ ما')
     }
@@ -76,11 +183,20 @@ export default function Finance() {
 
   const handleUpdateTransaction = async (e: React.FormEvent) => {
     e.preventDefault()
-    const result = await updateTransaction(editingTransaction.id, editingTransaction)
+    const transactionToUpdate = {
+      ...editingTransaction,
+      receipt_file: editReceiptFile || editingTransaction.receipt_file,
+      receipt_reference: editReceiptReference || editingTransaction.receipt_reference
+    }
+    const result = await updateTransaction(editingTransaction.id, transactionToUpdate)
     if (result.success) {
       toast.success('تم تحديث العملية بنجاح')
       setIsEditModalOpen(false)
       setEditingTransaction(null)
+      // Reset edit receipt states
+      setEditReceiptFile(null)
+      setEditReceiptReference('')
+      setShowEditReceiptPreview(false)
     } else {
       toast.error(result.message || 'حدث خطأ ما')
     }
@@ -153,6 +269,19 @@ export default function Finance() {
     },
     { header: 'النوع', accessor: 'transaction_type' as const },
     {
+      header: 'طريقة الدفع',
+      accessor: (t: any) => (
+        <div className="flex items-center gap-1">
+          <span>{t.payment_method || 'نقدا'}</span>
+          {t.receipt_file && (
+            <span title="يوجد إيصال">
+              <Receipt size={16} className="text-blue-500" />
+            </span>
+          )}
+        </div>
+      )
+    },
+    {
       header: 'مقبوض',
       accessor: (t: any) => (t.amount_received > 0 ? formatCurrency(t.amount_received) : '-'),
       className: 'text-emerald-500 font-bold'
@@ -169,7 +298,16 @@ export default function Finance() {
         <div className="flex gap-2">
           <button
             onClick={() => {
-              setEditingTransaction(t)
+              // Ensure payment_method has a default value for backward compatibility
+              const transactionWithDefaults = {
+                ...t,
+                payment_method: t.payment_method || 'نقدا',
+                receipt_file: t.receipt_file || null,
+                receipt_reference: t.receipt_reference || null
+              }
+              setEditingTransaction(transactionWithDefaults)
+              setEditReceiptReference(transactionWithDefaults.receipt_reference || '')
+              setShowEditReceiptPreview(!!transactionWithDefaults.receipt_file)
               setIsEditModalOpen(true)
             }}
             className="p-1 text-blue-600 hover:bg-blue-50 rounded"
@@ -382,6 +520,105 @@ export default function Finance() {
               </div>
 
               <div>
+                <label className="block text-sm font-bold text-slate-600 mb-1">طريقة الدفع</label>
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="payment-method"
+                      checked={newTransaction.payment_method === 'نقدا'}
+                      onChange={() => setNewTransaction({ ...newTransaction, payment_method: 'نقدا' })}
+                    />
+                    <span className="text-sm font-bold">نقدا</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="payment-method"
+                      checked={newTransaction.payment_method === 'تحويل بنكي'}
+                      onChange={() => setNewTransaction({ ...newTransaction, payment_method: 'تحويل بنكي' })}
+                    />
+                    <span className="text-sm font-bold">تحويل بنكي</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="payment-method"
+                      checked={newTransaction.payment_method === 'مصروفات ومشتريات'}
+                      onChange={() =>
+                        setNewTransaction({ ...newTransaction, payment_method: 'مصروفات ومشتريات' })
+                      }
+                    />
+                    <span className="text-sm font-bold">مصروفات ومشتريات</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Receipt upload for bank transfer */}
+              {newTransaction.payment_method === 'تحويل بنكي' && (
+                <div className="space-y-3">
+                  <label className="block text-sm font-bold text-slate-600">
+                    إيصال التحويل (اختياري)
+                  </label>
+
+                  {!showAddReceiptPreview ? (
+                    <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-4 text-center">
+                      <input
+                        type="file"
+                        id="add-receipt-upload"
+                        className="hidden"
+                        accept="image/*,.pdf"
+                        onChange={handleAddReceiptUpload}
+                      />
+                      <label
+                        htmlFor="add-receipt-upload"
+                        className="cursor-pointer flex flex-col items-center gap-2"
+                      >
+                        <FileImage size={32} className="text-slate-400" />
+                        <p className="text-sm text-slate-500 font-bold">انقر لرفع إيصال التحويل</p>
+                        <p className="text-xs text-slate-400">صور أو PDF حتى 5 ميجابايت</p>
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-3">
+                      <div className="flex items-center gap-3">
+                        {addReceiptFile?.startsWith('data:image') ? (
+                          <img
+                            src={addReceiptFile}
+                            alt="إيصال"
+                            className="w-16 h-16 object-cover rounded"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded flex items-center justify-center">
+                            <FileText size={24} className="text-slate-400" />
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                            تم رفع الإيصال
+                          </p>
+                          <input
+                            type="text"
+                            placeholder="رقم مرجعي (اختياري)"
+                            className="mt-1 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-sm"
+                            value={addReceiptReference}
+                            onChange={(e) => setAddReceiptReference(e.target.value)}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleRemoveAddReceipt}
+                          className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg"
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div>
                 <label className="block text-sm font-bold text-slate-600 mb-1">المبلغ</label>
                 <input
                   type="number"
@@ -506,6 +743,113 @@ export default function Finance() {
                   </label>
                 </div>
               </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-600 mb-1">طريقة الدفع</label>
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="edit-payment-method"
+                      checked={editingTransaction.payment_method === 'نقدا'}
+                      onChange={() =>
+                        setEditingTransaction({ ...editingTransaction, payment_method: 'نقدا' })
+                      }
+                    />
+                    <span className="text-sm font-bold">نقدا</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="edit-payment-method"
+                      checked={editingTransaction.payment_method === 'تحويل بنكي'}
+                      onChange={() =>
+                        setEditingTransaction({ ...editingTransaction, payment_method: 'تحويل بنكي' })
+                      }
+                    />
+                    <span className="text-sm font-bold">تحويل بنكي</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="edit-payment-method"
+                      checked={editingTransaction.payment_method === 'مصروفات ومشتريات'}
+                      onChange={() =>
+                        setEditingTransaction({
+                          ...editingTransaction,
+                          payment_method: 'مصروفات ومشتريات'
+                        })
+                      }
+                    />
+                    <span className="text-sm font-bold">مصروفات ومشتريات</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Receipt upload for bank transfer */}
+              {editingTransaction.payment_method === 'تحويل بنكي' && (
+                <div className="space-y-3">
+                  <label className="block text-sm font-bold text-slate-600">
+                    إيصال التحويل (اختياري)
+                  </label>
+
+                  {!showEditReceiptPreview && !editingTransaction.receipt_file ? (
+                    <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-4 text-center">
+                      <input
+                        type="file"
+                        id="edit-receipt-upload"
+                        className="hidden"
+                        accept="image/*,.pdf"
+                        onChange={handleEditReceiptUpload}
+                      />
+                      <label
+                        htmlFor="edit-receipt-upload"
+                        className="cursor-pointer flex flex-col items-center gap-2"
+                      >
+                        <FileImage size={32} className="text-slate-400" />
+                        <p className="text-sm text-slate-500 font-bold">انقر لرفع إيصال التحويل</p>
+                        <p className="text-xs text-slate-400">صور أو PDF حتى 5 ميجابايت</p>
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-3">
+                      <div className="flex items-center gap-3">
+                        {(editReceiptFile || editingTransaction.receipt_file)?.startsWith('data:image') ===
+                        true ? (
+                          <img
+                            src={editReceiptFile || editingTransaction.receipt_file}
+                            alt="إيصال"
+                            className="w-16 h-16 object-cover rounded"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded flex items-center justify-center">
+                            <FileText size={24} className="text-slate-400" />
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                            {editReceiptFile ? 'إيصال جديد' : 'إيصال موجود'}
+                          </p>
+                          <input
+                            type="text"
+                            placeholder="رقم مرجعي (اختياري)"
+                            className="mt-1 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-sm"
+                            value={editReceiptReference || editingTransaction.receipt_reference || ''}
+                            onChange={(e) => setEditReceiptReference(e.target.value)}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleRemoveEditReceipt}
+                          className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg"
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-bold text-slate-600 mb-1">المبلغ</label>

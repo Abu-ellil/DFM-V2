@@ -301,6 +301,9 @@ const initSchema = (db: Database): void => {
 
   // Run web auth migrations
   runWebAuthMigrations(db)
+
+  // Run payment methods migration
+  runPaymentMethodsMigration(db)
 }
 
 /**
@@ -412,6 +415,27 @@ const runWebAuthMigrations = (db: Database): void => {
     db.run('CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone)')
   } catch (e) {
     // Index already exists or error occurred
+  }
+}
+
+/**
+ * Add payment method columns to finance table
+ */
+const runPaymentMethodsMigration = (db: Database): void => {
+  try {
+    db.run(`ALTER TABLE finance ADD COLUMN payment_method TEXT DEFAULT 'نقدا'`)
+  } catch (e) {
+    // Column already exists, ignore error
+  }
+  try {
+    db.run(`ALTER TABLE finance ADD COLUMN receipt_file TEXT`)
+  } catch (e) {
+    // Column already exists, ignore error
+  }
+  try {
+    db.run(`ALTER TABLE finance ADD COLUMN receipt_reference TEXT`)
+  } catch (e) {
+    // Column already exists, ignore error
   }
 }
 

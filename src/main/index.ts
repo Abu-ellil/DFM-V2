@@ -637,8 +637,8 @@ ipcMain.handle('finance:create', async (_event, data) => {
   try {
     const db = getDb()
     const stmt = db.prepare(`
-      INSERT INTO finance (date, customer_id, transaction_type, amount_paid, amount_received, notes)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO finance (date, customer_id, transaction_type, amount_paid, amount_received, notes, payment_method, receipt_file, receipt_reference)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     stmt.bind([
       data.date,
@@ -646,7 +646,10 @@ ipcMain.handle('finance:create', async (_event, data) => {
       data.transaction_type,
       data.amount_paid,
       data.amount_received,
-      data.notes
+      data.notes,
+      data.payment_method || 'نقدا',
+      data.receipt_file || null,
+      data.receipt_reference || null
     ])
     stmt.run()
     stmt.free()
@@ -678,7 +681,7 @@ ipcMain.handle('finance:update', async (_event, id, data) => {
     const db = getDb()
     const stmt = db.prepare(`
       UPDATE finance
-      SET date = ?, customer_id = ?, transaction_type = ?, amount_paid = ?, amount_received = ?, notes = ?
+      SET date = ?, customer_id = ?, transaction_type = ?, amount_paid = ?, amount_received = ?, notes = ?, payment_method = ?, receipt_file = ?, receipt_reference = ?
       WHERE id = ?
     `)
     stmt.bind([
@@ -688,6 +691,9 @@ ipcMain.handle('finance:update', async (_event, id, data) => {
       data.amount_paid,
       data.amount_received,
       data.notes,
+      data.payment_method || 'نقدا',
+      data.receipt_file || null,
+      data.receipt_reference || null,
       id
     ])
     stmt.run()

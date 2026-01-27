@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { create } from 'zustand'
 
+type PaymentMethod = 'نقدا' | 'تحويل بنكي' | 'مصروفات ومشتريات'
+
 interface FinanceTransaction {
   id: number
   date: string
@@ -10,6 +12,9 @@ interface FinanceTransaction {
   amount_paid: number
   amount_received: number
   notes: string
+  payment_method: PaymentMethod
+  receipt_file?: string
+  receipt_reference?: string
   created_at: string
 }
 
