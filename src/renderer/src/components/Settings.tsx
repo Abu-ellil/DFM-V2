@@ -679,6 +679,9 @@ export default function Settings() {
           </div>
         </Card>
 
+        {/* Cloud Account */}
+        <CloudAccount />
+
         {/* Telegram Notifications */}
         <Card className="space-y-4">
           <div className="flex items-center justify-between mb-4">
@@ -757,8 +760,8 @@ export default function Settings() {
             {/* Bot Status */}
             <div
               className={`p-4 rounded-lg border-2 ${botStatus?.isRunning
-                  ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800'
-                  : 'bg-slate-50 border-slate-200 dark:bg-slate-800 dark:border-slate-700'
+                ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800'
+                : 'bg-slate-50 border-slate-200 dark:bg-slate-800 dark:border-slate-700'
                 }`}
             >
               <div className="flex items-center justify-between">
@@ -774,8 +777,8 @@ export default function Settings() {
                 <button
                   onClick={() => handleEnableBot(!botStatus?.isRunning)}
                   className={`text-xs px-4 py-2 rounded-full font-bold transition-colors ${botStatus?.isRunning
-                      ? 'bg-red-100 text-red-600 hover:bg-red-200'
-                      : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                    ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                    : 'bg-emerald-600 text-white hover:bg-emerald-700'
                     }`}
                 >
                   {botStatus?.isRunning ? 'إيقاف البوت' : 'تشغيل البوت'}

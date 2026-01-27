@@ -23,12 +23,12 @@ import {
   testBotConnection,
   getBotStats
 } from './telegram'
-import * as sync from './sync'
 import * as syncConflict from './sync/conflict'
 import * as webAuth from './web-auth'
 
 // Import license manager
 import * as licenseManager from './license'
+import * as sync from './sync'
 import { getRegistrationHandler } from './telegram/handlers/registration'
 
 let mainWindow: BrowserWindow | null = null
@@ -1744,7 +1744,7 @@ ipcMain.handle('telegram:deleteUser', async (_event, telegramId) => {
 // Telegram Registrations IPC
 ipcMain.handle('telegram:getRegistrations', async (_event, filters) => {
   try {
-    const { getRegistrationHandler } = require('./telegram/handlers/registration')
+
     const handler = getRegistrationHandler()
     const registrations = await handler.getRegistrations(filters)
     return { success: true, data: registrations }
@@ -1758,7 +1758,7 @@ ipcMain.handle(
   'telegram:approveRegistration',
   async (_event, registrationId, role, reviewerUserId) => {
     try {
-      const { getRegistrationHandler } = require('./telegram/handlers/registration')
+  
       const handler = getRegistrationHandler()
       const result = await handler.approveRegistration(registrationId, role, reviewerUserId)
       return result
@@ -1773,7 +1773,7 @@ ipcMain.handle(
   'telegram:rejectRegistration',
   async (_event, registrationId, reason, reviewerUserId) => {
     try {
-      const { getRegistrationHandler } = require('./telegram/handlers/registration')
+  
       const handler = getRegistrationHandler()
       const result = await handler.rejectRegistration(registrationId, reason, reviewerUserId)
       return result

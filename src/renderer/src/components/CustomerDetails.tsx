@@ -170,12 +170,12 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
   ) // دين الميزان - أصل قيمة التمور
 
   const totalCashPayments = useMemo(
-    () => customerFinance.reduce((acc, curr) => acc + (Number(curr.amount_paid) || 0), 0),
+    () => customerFinance.reduce((acc, curr) => acc + (Number(curr.amount_received) || 0), 0),
     [customerFinance]
   ) // توريدات البلح نقداً
 
   const totalAdvances = useMemo(
-    () => customerFinance.reduce((acc, curr) => acc + (Number(curr.amount_received) || 0), 0),
+    () => customerFinance.reduce((acc, curr) => acc + (Number(curr.amount_paid) || 0), 0),
     [customerFinance]
   ) // السلف والمصروفات
 
@@ -225,12 +225,12 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
     { header: 'البيان', accessor: 'transaction_type' as const },
     {
       header: 'له (إيراد من العميل)',
-      accessor: (t: any) => (t.amount_paid > 0 ? formatCurrency(t.amount_paid) : '-'),
+      accessor: (t: any) => (t.amount_received > 0 ? formatCurrency(t.amount_received) : '-'),
       className: 'text-emerald-600 font-bold'
     },
     {
       header: 'عليه (مدفوع للعميل)',
-      accessor: (t: any) => (t.amount_received > 0 ? formatCurrency(t.amount_received) : '-'),
+      accessor: (t: any) => (t.amount_paid > 0 ? formatCurrency(t.amount_paid) : '-'),
       className: 'text-red-600 font-bold'
     },
     {
@@ -424,18 +424,7 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
               </div>
             </div>
 
-            {/* إيرادات من العميل */}
-            <div className="bg-emerald-500/20 rounded-xl p-4 border-2 border-emerald-400/30">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <div>
-                  <p className="text-emerald-300 text-sm font-bold mb-1">إيرادات من العميل</p>
-                  <p className="text-xs text-slate-300">(العميل دفع للمصنع)</p>
-                </div>
-                <p className="text-2xl md:text-3xl font-black text-emerald-400 break-all">
-                  {formatCurrency(totalCashPayments)}
-                </p>
-              </div>
-            </div>
+       
 
             {/* إجمالي ما للعميل */}
             <div className="bg-cyan-500/20 rounded-xl p-4 border-2 border-cyan-400/30">
@@ -476,6 +465,19 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
                 </div>
                 <p className="text-3xl md:text-4xl font-black text-white break-all">
                   {formatCurrency(Math.abs(totalFinanceBalance))}
+                </p>
+              </div>
+            </div>
+
+                 {/* إيرادات من العميل */}
+            <div className="bg-emerald-500/20 rounded-xl p-4 border-2 border-emerald-400/30">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <div>
+                  <p className="text-emerald-300 text-sm font-bold mb-1">إيرادات من العميل</p>
+                  <p className="text-xs text-slate-300">(العميل دفع للمصنع)</p>
+                </div>
+                <p className="text-2xl md:text-3xl font-black text-emerald-400 break-all">
+                  {formatCurrency(totalCashPayments)}
                 </p>
               </div>
             </div>
@@ -695,19 +697,19 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
                     {printingTransaction.data.transaction_type}
                   </span>
                 </div>
-                {printingTransaction.data.amount_paid > 0 && (
+                {printingTransaction.data.amount_received > 0 && (
                   <div className="flex justify-between items-center border-b-2 border-emerald-100 pb-3 px-2 bg-emerald-50/30">
                     <span className="text-emerald-700 font-bold">له (إيراد من العميل):</span>
                     <span className="font-black text-emerald-800 text-4xl">
-                      {formatCurrency(printingTransaction.data.amount_paid)}
+                      {formatCurrency(printingTransaction.data.amount_received)}
                     </span>
                   </div>
                 )}
-                {printingTransaction.data.amount_received > 0 && (
+                {printingTransaction.data.amount_paid > 0 && (
                   <div className="flex justify-between items-center border-b-2 border-red-100 pb-3 px-2 bg-red-50/30">
                     <span className="text-red-700 font-bold">عليه (مدفوع للعميل):</span>
                     <span className="font-black text-red-800 text-4xl">
-                      {formatCurrency(printingTransaction.data.amount_received)}
+                      {formatCurrency(printingTransaction.data.amount_paid)}
                     </span>
                   </div>
                 )}

@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs'
 import { getMachineId } from './license'
 import { getDb } from './db'
+import { performSync } from './sync'
 
 const WEB_AUTH_API_URL = process.env.WEB_AUTH_API_URL || 'https://dates-factory-manager-cloud.vercel.app/api'
 
@@ -264,7 +265,6 @@ export async function restoreUserData(params: {
       console.log('[WEB_AUTH] Received restore data, applying...')
       // The sync system will handle importing the data
       // For now, we'll trigger a full sync pull
-      const { performSync } = require('./sync')
       await performSync({ forceFullSync: true })
     }
 
