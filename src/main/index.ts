@@ -1835,10 +1835,18 @@ ipcMain.handle('sync:getConflicts', async (_event, limit) => {
   }
 })
 
+ipcMain.handle('sync:clearConflicts', async () => {
+  try {
+    return await syncConflict.clearOldConflicts()
+  } catch (error: any) {
+    console.error('Clear conflicts error:', error)
+    return { success: false, message: error.message || 'Failed to clear conflicts' }
+  }
+})
+
 ipcMain.handle('sync:clearOldConflicts', async (_event, olderThanDays) => {
   try {
-    const { clearOldConflicts } = require('./sync/conflict')
-    const cleared = await clearOldConflicts(olderThanDays || 90)
+    const cleared = await syncConflict.clearOldConflicts(olderThanDays || 90)
     return { success: true, data: { cleared } }
   } catch (error: any) {
     console.error('Clear conflicts error:', error)

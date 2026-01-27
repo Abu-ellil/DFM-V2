@@ -25,7 +25,7 @@ interface WeighbridgeStore {
   addTransaction: (data: any) => Promise<{ success: boolean; message?: string }>
 }
 
-export const useWeighbridgeStore = create<WeighbridgeStore>((set, get) => ({
+export const useWeighbridgeStore = create<WeighbridgeStore>((set) => ({
   transactions: [],
   isLoading: false,
   fetchTransactions: async () => {

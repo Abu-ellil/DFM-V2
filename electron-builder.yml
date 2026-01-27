@@ -1,9 +1,15 @@
-appId: com.dfm.app
-productName: DFM-V2
+appId: com.dfm.dates-factory-manager
+productName: DFM V2
 directories:
+  output: release
   buildResources: build
-  output: dist
 files:
+  - from: out
+    to: out
+    filter: ["**/*"]
+  - from: resources
+    to: resources
+    filter: ["**/*"]
   - '!**/.vscode/*'
   - '!src/*'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
@@ -15,8 +21,11 @@ asarUnpack:
   - resources/**
 compression: maximum
 win:
-  executableName: DFM-V2
+  executableName: DFM V2
   icon: build/icon.ico
+  signingHashAlgorithms:
+    - sha256
+  sign: null
   target:
     - target: nsis
       arch:
@@ -25,10 +34,12 @@ nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
-  createDesktopShortcut: always
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
   oneClick: false
   allowToChangeInstallationDirectory: true
 mac:
+  icon: build/icon.icns
   target:
     - target: dmg
       arch:
@@ -45,15 +56,17 @@ mac:
 dmg:
   artifactName: ${name}-${version}.${ext}
 linux:
+  icon: build/icon.png
   target:
     - AppImage
-    - snap
     - deb
-  maintainer: electronjs.org
+  maintainer: example.com
   category: Utility
 appImage:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false
 publish:
   provider: github
+  owner: Abu-ellil
+  repo: DFM-V2
   releaseType: release

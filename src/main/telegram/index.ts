@@ -133,7 +133,8 @@ export async function updateBotToken(
     stmt.run()
     stmt.free()
 
-    await require('../db').saveDatabase()
+    const { saveDatabase } = await import('../db')
+    await saveDatabase()
 
     // Restart bot if it was running
     if (isBotRunning) {

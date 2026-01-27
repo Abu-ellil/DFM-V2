@@ -27,9 +27,9 @@ import {
   Menu,
   ChevronRight,
   Bell,
-  Copy,
-  MessageCircle
+  Copy
 } from 'lucide-react'
+
 
 function App() {
   const {
@@ -39,7 +39,6 @@ function App() {
     activeTab,
     setActiveTab,
     selectedCustomerId,
-    setSelectedCustomerId,
     navigateToCustomer
   } = useAppStore()
   const { user, setUser, logout } = useAuthStore()
@@ -131,9 +130,8 @@ function App() {
     >
       {/* Sidebar */}
       <aside
-        className={`${
-          isSidebarOpenResponsive ? 'w-64' : 'w-20'
-        } bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 transition-all duration-300 flex flex-col z-20 shadow-xl print:hidden`}
+        className={`${isSidebarOpenResponsive ? 'w-64' : 'w-20'
+          } bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 transition-all duration-300 flex flex-col z-20 shadow-xl print:hidden`}
       >
         {/* Logo Area */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-slate-100 dark:border-slate-800">
@@ -294,11 +292,10 @@ function NavItem({ icon, label, isOpen, active = false, onClick, className = '' 
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group ${
-        active
+      className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group ${active
           ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
           : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-      } ${className}`}
+        } ${className}`}
     >
       <div
         className={`${active ? 'text-white' : 'group-hover:text-emerald-600'} transition-colors`}

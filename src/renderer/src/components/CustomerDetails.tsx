@@ -34,7 +34,7 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
   const { transactions: finance, fetchFinance } = useFinanceStore()
   const { transactions: crates, fetchCrates } = useCrateStore()
   const { settings, fetchSettings } = useSettingsStore()
-  const { selectedCustomer: accountSummary, fetchCustomerSummary, refreshSelectedCustomer } =
+  const { fetchCustomerSummary, refreshSelectedCustomer } =
     useCustomerAccountStore()
 
   const [activeTab, setActiveTab] = useState<'all' | 'weighbridge' | 'finance' | 'crates'>('all')
@@ -411,20 +411,9 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
               </h3>
             </div>
 
-            {/* دين الميزان - قيمة التمور المسلمة */}
-            <div className="bg-blue-500/20 rounded-xl p-4 border-2 border-blue-400/30">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <div>
-                  <p className="text-blue-300 text-sm font-bold mb-1">دين الميزان (قيمة التمور)</p>
-                  <p className="text-xs text-slate-300">(المصنع عليه للعميل)</p>
-                </div>
-                <p className="text-2xl md:text-3xl font-black text-blue-400 break-all">
-                  {formatCurrency(totalWeighbridgeDebt)}
-                </p>
-              </div>
-            </div>
 
-       
+
+
 
             {/* إجمالي ما للعميل */}
             <div className="bg-cyan-500/20 rounded-xl p-4 border-2 border-cyan-400/30">
@@ -458,7 +447,7 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
             >
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                 <div>
-                  <p className="text-sm font-bold mb-1 opacity-90">الرصيد النهائي</p>
+                  <p className="text-sm font-bold mb-1 opacity-90">المتبقي للعميل</p>
                   <p className="text-xs opacity-75">
                     {totalFinanceBalance >= 0 ? 'المصنع عليه للزبون' : 'الزبون عليه للمصنع'}
                   </p>
@@ -469,18 +458,7 @@ export default function CustomerDetails({ customerId, onBack }: CustomerDetailsP
               </div>
             </div>
 
-                 {/* إيرادات من العميل */}
-            <div className="bg-emerald-500/20 rounded-xl p-4 border-2 border-emerald-400/30">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <div>
-                  <p className="text-emerald-300 text-sm font-bold mb-1">إيرادات من العميل</p>
-                  <p className="text-xs text-slate-300">(العميل دفع للمصنع)</p>
-                </div>
-                <p className="text-2xl md:text-3xl font-black text-emerald-400 break-all">
-                  {formatCurrency(totalCashPayments)}
-                </p>
-              </div>
-            </div>
+
 
             {/* معلومات إضافية */}
             <div className="pt-3 border-t border-slate-600 grid grid-cols-2 gap-3 text-xs">

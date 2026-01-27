@@ -100,8 +100,7 @@ export function registerCommands(bot: TelegramBot): void {
     if (msg.text.startsWith('/')) return
 
     // Check if user is in registration flow
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { hasRegistrationSession } = require('./register')
+    const { hasRegistrationSession } = await import('./register')
     if (!hasRegistrationSession(telegramId)) return
 
     // Check rate limit

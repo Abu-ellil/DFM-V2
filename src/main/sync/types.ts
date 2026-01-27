@@ -117,6 +117,7 @@ export interface SyncOptions {
   intervalMs?: number // Auto-sync interval (default: 30000ms)
   retryAttempts?: number // Number of retry attempts (default: 3)
   retryDelayMs?: number // Delay between retries (default: 5000ms)
+  forceFullSync?: boolean // Force full sync
 }
 
 /**

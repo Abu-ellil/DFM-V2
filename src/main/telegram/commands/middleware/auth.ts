@@ -36,8 +36,8 @@ export async function updateUserLastInteraction(telegramId: number): Promise<voi
     stmt.bind([telegramId])
     stmt.run()
     stmt.free()
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    await require('../../../db').saveDatabase()
+    const { saveDatabase } = await import('../../../db')
+    await saveDatabase()
   } catch (error) {
     console.error('Error updating user last interaction:', error)
   }
