@@ -7,3 +7,6 @@ out
 *.db
 *.db-shm
 *.db-wal
+.claude/settings.local.json
+release/
+build_log.txt
