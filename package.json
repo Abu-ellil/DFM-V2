@@ -1,6 +1,6 @@
 {
   "name": "dfm-v2",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "DFM V2 - An Electron application with React and TypeScript",
   "main": "./out/main/index.js",
   "author": "example.com",
@@ -24,7 +24,6 @@
     "release:minor": "npm version minor && git push --follow-tags",
     "release:major": "npm version major && git push --follow-tags"
   },
-
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
