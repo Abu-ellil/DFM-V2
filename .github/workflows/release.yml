@@ -9,7 +9,17 @@ permissions:
   contents: write
 
 jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create ${{ github.ref_name }} --title "${{ github.ref_name }}" --notes "DFM-V2 Release ${{ github.ref_name }}" || echo "Release already exists"
+
   release:
+    needs: create-release
     strategy:
       fail-fast: false
       matrix:
