@@ -3,15 +3,15 @@
 const fs = require('fs');
 const path = require('path');
 
-// Locales to keep
-const KEEP_LOCALES = ['en-US.pak', 'en-GB.pak', 'ar.pak'];
+// Locales to keep (English US and Arabic only)
+const KEEP_LOCALES = ['en-US.pak', 'ar.pak'];
 
 /**
  * Filter Electron locales to only keep English and Arabic
- * @param {string} resourcesPath - Path to the resources folder
+ * @param {string} appOutDir - Path to the app output directory
  */
-async function filterLocales(resourcesPath) {
-  const localesPath = path.join(resourcesPath, 'locales');
+async function filterLocales(appOutDir) {
+  const localesPath = path.join(appOutDir, 'locales');
 
   console.log('Filtering Electron locales...');
   console.log('Locales path:', localesPath);
@@ -53,9 +53,7 @@ async function main(context) {
   console.log('Arch:', arch);
   console.log('Output dir:', appOutDir);
 
-  const resourcesPath = path.join(appOutDir, 'resources');
-
-  await filterLocales(resourcesPath);
+  await filterLocales(appOutDir);
 }
 
 // Export for electron-builder afterPack hook

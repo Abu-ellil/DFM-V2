@@ -4,12 +4,7 @@ directories:
   output: release
   buildResources: build
 files:
-  - from: out
-    to: out
-    filter: ["**/*"]
-  - from: resources
-    to: resources
-    filter: ["**/*"]
+  - out/**/**
   - '!**/.vscode/*'
   - '!src/*'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
@@ -24,6 +19,17 @@ files:
   - '!**/*.log'
   - '!**/debug.log'
   - '!**/coverage/**'
+  - '!**/.git/**'
+  # node_modules excluded (except sql.js which is handled by asarUnpack below)
+  - '!package-lock.json'
+  - '!yarn.lock'
+  - '!pnpm-lock.yaml'
+  - '!.github/**'
+# ASAR configuration for optimal compression
+asar: true
+asarUnpack:
+  - node_modules/sql.js/dist/sql-wasm.wasm
+  - node_modules/sql.js/dist/sql-wasm.js
 compression: maximum
 # Filter Electron locales to only English and Arabic after build
 afterPack: scripts/filter-locales.js
