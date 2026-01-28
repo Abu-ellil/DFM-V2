@@ -1,6 +1,6 @@
 {
   "name": "dfm-v2",
-  "version": "1.1.3",
+  "version": "1.1.4",
   "description": "DFM V2 - An Electron application with React and TypeScript",
   "main": "./out/main/index.js",
   "author": "example.com",
