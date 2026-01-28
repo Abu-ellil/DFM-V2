@@ -1,7 +1,9 @@
 import { ReactNode, useState } from 'react'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
-import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
+import ChevronUp from 'lucide-react/dist/esm/icons/chevron-up'
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down'
+import ChevronsUpDown from 'lucide-react/dist/esm/icons/chevrons-up-down'
 
 function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs))

@@ -4,21 +4,19 @@ import { useCustomerStore } from '../store/useCustomerStore'
 import { useAppStore } from '../store/useAppStore'
 import { Card } from './ui/Card'
 import { Table } from './ui/Table'
-import {
-  Wallet,
-  Search,
-  History,
-  PieChart,
-  TrendingUp,
-  TrendingDown,
-  Plus,
-  X,
-  Edit2,
-  Trash2,
-  Receipt,
-  FileImage,
-  FileText
-} from 'lucide-react'
+import Wallet from 'lucide-react/dist/esm/icons/wallet'
+import Search from 'lucide-react/dist/esm/icons/search'
+import History from 'lucide-react/dist/esm/icons/history'
+import PieChart from 'lucide-react/dist/esm/icons/pie-chart'
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up'
+import TrendingDown from 'lucide-react/dist/esm/icons/trending-down'
+import Plus from 'lucide-react/dist/esm/icons/plus'
+import X from 'lucide-react/dist/esm/icons/x'
+import Edit2 from 'lucide-react/dist/esm/icons/edit-2'
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
+import Receipt from 'lucide-react/dist/esm/icons/receipt'
+import FileImage from 'lucide-react/dist/esm/icons/file-image'
+import FileText from 'lucide-react/dist/esm/icons/file-text'
 import { toast } from 'react-toastify'
 import { formatCurrency } from '../utils/format'
 

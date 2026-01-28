@@ -8,19 +8,17 @@ import { useCustomerAccountStore } from '../store/useCustomerAccountStore'
 import { Card } from './ui/Card'
 import { Table } from './ui/Table'
 import { toast } from 'react-toastify'
-import {
-  ArrowLeft,
-  Printer,
-  Plus,
-  Scale,
-  Wallet,
-  Package,
-  Calendar,
-  User,
-  Phone,
-  Tag,
-  X
-} from 'lucide-react'
+import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left'
+import Printer from 'lucide-react/dist/esm/icons/printer'
+import Plus from 'lucide-react/dist/esm/icons/plus'
+import Scale from 'lucide-react/dist/esm/icons/scale'
+import Wallet from 'lucide-react/dist/esm/icons/wallet'
+import Package from 'lucide-react/dist/esm/icons/package'
+import Calendar from 'lucide-react/dist/esm/icons/calendar'
+import User from 'lucide-react/dist/esm/icons/user'
+import Phone from 'lucide-react/dist/esm/icons/phone'
+import Tag from 'lucide-react/dist/esm/icons/tag'
+import X from 'lucide-react/dist/esm/icons/x'
 import { formatCurrency, formatNumber } from '../utils/format'
 
 interface CustomerDetailsProps {

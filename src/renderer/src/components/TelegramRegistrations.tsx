@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Card } from './ui/Card'
-import { UserCheck, UserX, RefreshCw, Clock, FileText } from 'lucide-react'
+import UserCheck from 'lucide-react/dist/esm/icons/user-check'
+import UserX from 'lucide-react/dist/esm/icons/user-x'
+import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw'
+import Clock from 'lucide-react/dist/esm/icons/clock'
+import FileText from 'lucide-react/dist/esm/icons/file-text'
 import { toast } from 'react-toastify'
 
 interface RegistrationRequest {

@@ -1,15 +1,13 @@
 import { useEffect } from 'react'
 import { Card } from './ui/Card'
-import {
-  Users,
-  Scale,
-  Package,
-  Wallet,
-  TrendingUp,
-  Calendar,
-  ArrowUpRight,
-  ArrowDownRight
-} from 'lucide-react'
+import Users from 'lucide-react/dist/esm/icons/users'
+import Scale from 'lucide-react/dist/esm/icons/scale'
+import Package from 'lucide-react/dist/esm/icons/package'
+import Wallet from 'lucide-react/dist/esm/icons/wallet'
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up'
+import Calendar from 'lucide-react/dist/esm/icons/calendar'
+import ArrowUpRight from 'lucide-react/dist/esm/icons/arrow-up-right'
+import ArrowDownRight from 'lucide-react/dist/esm/icons/arrow-down-right'
 import { useCustomerStore } from '../store/useCustomerStore'
 import { useWeighbridgeStore } from '../store/useWeighbridgeStore'
 import { useCrateStore } from '../store/useCrateStore'

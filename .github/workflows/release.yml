@@ -58,7 +58,9 @@ jobs:
             ${{ runner.os }}-node-
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          npm ci
+          npm prune --production
 
       - name: Rebuild native modules
         run: npm rebuild

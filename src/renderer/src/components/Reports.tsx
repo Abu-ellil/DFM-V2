@@ -2,16 +2,14 @@ import { useState, useEffect } from 'react'
 import { toast } from 'react-toastify'
 import { Card } from './ui/Card'
 import { Table } from './ui/Table'
-import {
-  BarChart3,
-  Calendar,
-  Download,
-  Scale,
-  Wallet,
-  Package,
-  TrendingUp,
-  TrendingDown
-} from 'lucide-react'
+import BarChart3 from 'lucide-react/dist/esm/icons/bar-chart-3'
+import Calendar from 'lucide-react/dist/esm/icons/calendar'
+import Download from 'lucide-react/dist/esm/icons/download'
+import Scale from 'lucide-react/dist/esm/icons/scale'
+import Wallet from 'lucide-react/dist/esm/icons/wallet'
+import Package from 'lucide-react/dist/esm/icons/package'
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up'
+import TrendingDown from 'lucide-react/dist/esm/icons/trending-down'
 import { useWeighbridgeStore } from '../store/useWeighbridgeStore'
 import { useFinanceStore } from '../store/useFinanceStore'
 import { useCrateStore } from '../store/useCrateStore'

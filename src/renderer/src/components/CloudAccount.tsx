@@ -1,19 +1,17 @@
 import { useState, useEffect } from 'react'
 import { Card } from './ui/Card'
-import {
-    Cloud,
-    CloudOff,
-    User,
-    Phone,
-    Lock,
-    Building2,
-    LogIn,
-    UserPlus,
-    Download,
-    CheckCircle,
-    AlertCircle,
-    Loader2
-} from 'lucide-react'
+import Cloud from 'lucide-react/dist/esm/icons/cloud'
+import CloudOff from 'lucide-react/dist/esm/icons/cloud-off'
+import User from 'lucide-react/dist/esm/icons/user'
+import Phone from 'lucide-react/dist/esm/icons/phone'
+import Lock from 'lucide-react/dist/esm/icons/lock'
+import Building2 from 'lucide-react/dist/esm/icons/building-2'
+import LogIn from 'lucide-react/dist/esm/icons/log-in'
+import UserPlus from 'lucide-react/dist/esm/icons/user-plus'
+import Download from 'lucide-react/dist/esm/icons/download'
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle'
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle'
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2'
 import { clsx } from 'clsx'
 import { toast } from 'react-toastify'
 

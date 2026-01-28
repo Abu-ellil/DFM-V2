@@ -4,20 +4,18 @@ import { useCustomerAccountStore } from '../store/useCustomerAccountStore'
 import { Card } from './ui/Card'
 import { SyncSettings } from './SyncSettings'
 import { CloudAccount } from './CloudAccount'
-import {
-  Settings as SettingsIcon,
-  Save,
-  Database,
-  Bell,
-  Shield,
-  Upload,
-  FileSpreadsheet,
-  Plus,
-  Trash2,
-  Lock,
-  Key,
-  Info
-} from 'lucide-react'
+import SettingsIcon from 'lucide-react/dist/esm/icons/settings'
+import Save from 'lucide-react/dist/esm/icons/save'
+import Database from 'lucide-react/dist/esm/icons/database'
+import Bell from 'lucide-react/dist/esm/icons/bell'
+import Shield from 'lucide-react/dist/esm/icons/shield'
+import Upload from 'lucide-react/dist/esm/icons/upload'
+import FileSpreadsheet from 'lucide-react/dist/esm/icons/file-spreadsheet'
+import Plus from 'lucide-react/dist/esm/icons/plus'
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
+import Lock from 'lucide-react/dist/esm/icons/lock'
+import Key from 'lucide-react/dist/esm/icons/key'
+import Info from 'lucide-react/dist/esm/icons/info'
 import { toast } from 'react-toastify'
 
 export default function Settings() {

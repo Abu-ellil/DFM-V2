@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { toast } from 'react-toastify'
-import { Shield, Key, Copy, ExternalLink, CheckCircle2, Clock, RefreshCw } from 'lucide-react'
+import Shield from 'lucide-react/dist/esm/icons/shield'
+import Key from 'lucide-react/dist/esm/icons/key'
+import Copy from 'lucide-react/dist/esm/icons/copy'
+import ExternalLink from 'lucide-react/dist/esm/icons/external-link'
+import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2'
+import Clock from 'lucide-react/dist/esm/icons/clock'
+import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw'
 
 interface ActivationScreenProps {
   onActivationSuccess: () => void

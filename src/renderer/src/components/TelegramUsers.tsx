@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Card } from './ui/Card'
-import { Users, Shield, Trash2, CheckCircle, RefreshCw } from 'lucide-react'
+import Users from 'lucide-react/dist/esm/icons/users'
+import Shield from 'lucide-react/dist/esm/icons/shield'
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle'
+import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw'
 import { toast } from 'react-toastify'
 
 interface TelegramUser {

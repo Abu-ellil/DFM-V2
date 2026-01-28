@@ -16,11 +16,17 @@ files:
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
-asar: true
-asarUnpack:
-  - resources/**
-  - node_modules/sql.js/dist/**
-compression: normal
+  - '!**/*.test.{ts,tsx,js,jsx}'
+  - '!**/*.spec.{ts,tsx,js,jsx}'
+  - '!**/__tests__/**'
+  - '!**/__mocks__/**'
+  - '!**/*.map'
+  - '!**/*.log'
+  - '!**/debug.log'
+  - '!**/coverage/**'
+compression: maximum
+# Filter Electron locales to only English and Arabic after build
+afterPack: scripts/filter-locales.js
 win:
   executableName: DFM V2
   icon: build/icon.ico
@@ -38,6 +44,9 @@ nsis:
   createStartMenuShortcut: true
   oneClick: false
   allowToChangeInstallationDirectory: true
+  # Optimize NSIS installer size
+  deleteAppDataOnUninstall: false
+  runAfterFinish: false
 mac:
   icon: build/icon.icns
   hardenedRuntime: true
@@ -71,3 +80,8 @@ publish:
   owner: Abu-ellil
   repo: DFM-V2
   releaseType: release
+# Disable automatic updates to reduce runtime checks
+electronDownload:
+  cache: D:\CACHE\electron
+# Optimize build by disabling unnecessary features
+detectUpdateChannel: false

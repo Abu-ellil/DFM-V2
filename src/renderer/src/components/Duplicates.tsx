@@ -2,16 +2,14 @@ import { useState, useEffect } from 'react'
 import { toast } from 'react-toastify'
 import { Card } from './ui/Card'
 import { Table } from './ui/Table'
-import {
-  Copy,
-  Trash2,
-  RefreshCw,
-  CheckCircle2,
-  AlertTriangle,
-  Scale,
-  Wallet,
-  Package
-} from 'lucide-react'
+import Copy from 'lucide-react/dist/esm/icons/copy'
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
+import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw'
+import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2'
+import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle'
+import Scale from 'lucide-react/dist/esm/icons/scale'
+import Wallet from 'lucide-react/dist/esm/icons/wallet'
+import Package from 'lucide-react/dist/esm/icons/package'
 import { formatCurrency, formatNumber } from '../utils/format'
 import { useAppStore } from '../store/useAppStore'
 

@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { toast } from 'react-toastify'
-import { LogIn, User, Lock } from 'lucide-react'
+import LogIn from 'lucide-react/dist/esm/icons/log-in'
+import User from 'lucide-react/dist/esm/icons/user'
+import Lock from 'lucide-react/dist/esm/icons/lock'
 
 interface LoginProps {
   onLoginSuccess: (user: any) => void

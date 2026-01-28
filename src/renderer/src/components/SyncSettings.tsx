@@ -2,16 +2,14 @@ import { useEffect, useState } from 'react'
 import { useSyncStore } from '../store/useSyncStore'
 import { Card } from './ui/Card'
 import { Switch } from '@headlessui/react'
-import {
-  Cloud,
-  CloudOff,
-  RefreshCw,
-  CheckCircle,
-  XCircle,
-  Clock,
-  AlertCircle,
-  ChevronRight
-} from 'lucide-react'
+import Cloud from 'lucide-react/dist/esm/icons/cloud'
+import CloudOff from 'lucide-react/dist/esm/icons/cloud-off'
+import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw'
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle'
+import XCircle from 'lucide-react/dist/esm/icons/x-circle'
+import Clock from 'lucide-react/dist/esm/icons/clock'
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle'
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right'
 import { clsx } from 'clsx'
 
 export function SyncSettings() {

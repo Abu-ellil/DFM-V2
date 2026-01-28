@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Download, RefreshCw, X, CheckCircle2, AlertCircle, Info } from 'lucide-react'
+import Download from 'lucide-react/dist/esm/icons/download'
+import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw'
+import X from 'lucide-react/dist/esm/icons/x'
+import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2'
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle'
+import Info from 'lucide-react/dist/esm/icons/info'
 import { toast } from 'react-toastify'
 
 interface UpdateStatus {
